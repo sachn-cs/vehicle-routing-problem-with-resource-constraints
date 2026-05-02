@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRP-RPD Solver Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>VRP-RPD Solver</h1>
+            <p>Resource-Constrained Pickup and Delivery Optimization</p>
+        </header>
+
+        <main>
+            <div class="sidebar">
+                <div class="card glass">
+                    <h3>Controls</h3>
+                    <div class="control-group">
+                        <label>Customers</label>
+                        <input type="range" id="customerCount" min="5" max="30" value="15">
+                        <span id="customerCountVal">15</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Vehicles</label>
+                        <input type="range" id="vehicleCount" min="1" max="5" value="3">
+                        <span id="vehicleCountVal">3</span>
+                    </div>
+                    <div class="control-group">
+                        <label>ALNS Iterations</label>
+                        <input type="number" id="alnsIter" value="200">
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <input type="checkbox" id="parallelMode" checked>
+                        <label for="parallelMode">Parallel Mode (Worker Threads)</label>
+                    </div>
+                    <button id="solveBtn" class="primary-btn">Solve Problem</button>
+                </div>
+
+                <div class="card glass stats">
+                    <h3>Statistics</h3>
+                    <div class="stat-item">
+                        <span class="label">Status</span>
+                        <span id="status" class="value">Ready</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Best Makespan</span>
+                        <span id="makespan" class="value">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Exec Time</span>
+                        <span id="execTime" class="value">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <canvas id="mapCanvas"></canvas>
+                <div class="overlay-info" id="overlayInfo"></div>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
