@@ -1,5 +1,5 @@
 import type { Solution } from '../../core/Solution.js';
-import type { Customer, Node } from '../../core/Problem.js';
+import type { Customer, CustomerWithTimeWindows, Node } from '../../core/Problem.js';
 
 /**
  * Removal operators for ALNS.
@@ -16,7 +16,9 @@ export const RemovalOperators = {
 
     for (let i = 0; i < k && allCustomers.length > 0; i++) {
       const randomIndex = Math.floor(Math.random() * allCustomers.length);
-      const customer = allCustomers.splice(randomIndex, 1)[0]!;
+      const [spliced] = allCustomers.splice(randomIndex, 1);
+      if (!spliced) continue;
+      const customer = spliced;
 
       for (const route of newSolution.routes) {
         const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
@@ -55,7 +57,9 @@ export const RemovalOperators = {
     customerCosts.sort((a, b) => b.cost - a.cost);
 
     for (let i = 0; i < k && i < customerCosts.length; i++) {
-      const customer = customerCosts[i]!.customer;
+      const entry = customerCosts[i];
+      if (!entry) continue;
+      const customer = entry.customer;
 
       for (const route of newSolution.routes) {
         const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
@@ -263,7 +267,7 @@ export const RemovalOperators = {
 
       // Check if time window constrained
       if ('earliestDeliveryTime' in customer) {
-        const twCustomer = customer as import('../../core/Problem.js').CustomerWithTimeWindows;
+        const twCustomer = customer as CustomerWithTimeWindows;
         const deliverySlack = Math.max(0, twCustomer.earliestDeliveryTime - deliveryTime);
         const pickupSlack = Math.max(0, twCustomer.earliestPickupTime - pickupTime);
         score = deliverySlack + pickupSlack;
@@ -281,7 +285,9 @@ export const RemovalOperators = {
 
     // Remove k most critical customers
     for (let i = 0; i < k && i < tightnessScores.length; i++) {
-      const customer = tightnessScores[i]!.customer;
+      const entry = tightnessScores[i];
+      if (!entry) continue;
+      const customer = entry.customer;
 
       for (const route of newSolution.routes) {
         const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
@@ -358,12 +364,9 @@ export const InsertionOperators = {
             testRoute.nodes.splice(dPos, 0, customer.deliveryNodeId);
             testRoute.nodes.splice(pPos + (dPos <= pPos ? 1 : 0), 0, customer.pickupNodeId);
 
-            const testSolution = newSolution.clone();
-            testSolution.routes[rIdx] = testRoute;
-            testSolution.calculateSchedule();
-
-            if (testSolution.makespan < bestCost) {
-              bestCost = testSolution.makespan;
+            const testMakespan = newSolution.evaluateMakespanWithRoute(rIdx, testRoute);
+            if (testMakespan < bestCost) {
+              bestCost = testMakespan;
               bestRouteIndex = rIdx;
               bestDeliveryPos = dPos;
               bestPickupPos = pPos;
@@ -446,12 +449,9 @@ function regretInsertion(
             testRoute.nodes.splice(dPos, 0, customer.deliveryNodeId);
             testRoute.nodes.splice(pPos + (dPos <= pPos ? 1 : 0), 0, customer.pickupNodeId);
 
-            const testSolution = newSolution.clone();
-            testSolution.routes[rIdx] = testRoute;
-            testSolution.calculateSchedule();
-
-            if (testSolution.makespan < bestRouteCost) {
-              bestRouteCost = testSolution.makespan;
+            const testMakespan = newSolution.evaluateMakespanWithRoute(rIdx, testRoute);
+            if (testMakespan < bestRouteCost) {
+              bestRouteCost = testMakespan;
               bestDPos = dPos;
               bestPPos = pPos;
             }
@@ -464,24 +464,40 @@ function regretInsertion(
       costs.sort((a, b) => a.cost - b.cost);
 
       // Calculate regret (difference between k-th best and best)
+      const best = costs[0];
+      if (!best) continue;
+
       if (costs.length >= k) {
-        const regret = costs[k - 1]!.cost - costs[0]!.cost;
+        const kth = costs[k - 1];
+        if (!kth) continue;
+        const regret = kth.cost - best.cost;
         if (regret > bestRegret) {
           bestRegret = regret;
           bestCustomer = customer;
-          bestRouteIndex = costs[0]!.routeIndex;
-          bestDeliveryPos = costs[0]!.dPos;
-          bestPickupPos = costs[0]!.pPos;
+          bestRouteIndex = best.routeIndex;
+          bestDeliveryPos = best.dPos;
+          bestPickupPos = best.pPos;
         }
       } else if (costs.length >= 2 && k > costs.length) {
         // Fallback to available regret
-        const regret = costs[costs.length - 1]!.cost - costs[0]!.cost;
+        const worst = costs[costs.length - 1];
+        if (!worst) continue;
+        const regret = worst.cost - best.cost;
         if (regret > bestRegret) {
           bestRegret = regret;
           bestCustomer = customer;
-          bestRouteIndex = costs[0]!.routeIndex;
-          bestDeliveryPos = costs[0]!.dPos;
-          bestPickupPos = costs[0]!.pPos;
+          bestRouteIndex = best.routeIndex;
+          bestDeliveryPos = best.dPos;
+          bestPickupPos = best.pPos;
+        }
+      } else if (costs.length >= 1) {
+        // Only one viable route exists; use it with zero regret
+        if (0 >= bestRegret) {
+          bestRegret = 0;
+          bestCustomer = customer;
+          bestRouteIndex = best.routeIndex;
+          bestDeliveryPos = best.dPos;
+          bestPickupPos = best.pPos;
         }
       }
     }
@@ -494,6 +510,9 @@ function regretInsertion(
       }
       const index = remaining.indexOf(bestCustomer);
       remaining.splice(index, 1);
+    } else if (remaining.length > 0) {
+      // Safety break to prevent infinite loop
+      break;
     }
   }
 

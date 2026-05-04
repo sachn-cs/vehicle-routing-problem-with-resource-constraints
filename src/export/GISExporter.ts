@@ -30,6 +30,11 @@ export interface KMLPlacemark {
  * Exports VRP-RPD solutions to GIS formats (GeoJSON, KML).
  */
 export class GISExporter {
+  /**
+   * @param solution - Solution to export
+   * @param problem - Problem instance the solution solves
+   * @param coordinateTransform - Optional function to convert problem coordinates
+   */
   constructor(
     private readonly solution: Solution,
     private readonly problem: Problem,
@@ -37,20 +42,19 @@ export class GISExporter {
   ) {}
 
   /**
-   * Exports solution as GeoJSON.
+   * @returns GeoJSON FeatureCollection representing the solution
    */
   toGeoJSON(): GeoJSON {
     const features: GeoJSONFeature[] = [];
 
     // Add depot as a point
-    const depot = this.problem.nodes[this.problem.depotNodeId];
-    if (depot) {
-      const coords = this.transformCoordinates(depot.x, depot.y);
+    const depotCoords = this.getDepotCoords();
+    if (depotCoords) {
       features.push({
         type: 'Feature',
         geometry: {
           type: 'Point',
-          coordinates: coords,
+          coordinates: depotCoords,
         },
         properties: {
           name: 'Depot',
@@ -61,16 +65,13 @@ export class GISExporter {
 
     // Add customer locations
     for (const customer of this.problem.customers) {
-      const deliveryNode = this.problem.nodes[customer.deliveryNodeId];
-      const pickupNode = this.problem.nodes[customer.pickupNodeId];
-
-      if (deliveryNode) {
-        const coords = this.transformCoordinates(deliveryNode.x, deliveryNode.y);
+      const deliveryCoords = this.getNodeCoords(customer.deliveryNodeId);
+      if (deliveryCoords) {
         features.push({
           type: 'Feature',
           geometry: {
             type: 'Point',
-            coordinates: coords,
+            coordinates: deliveryCoords,
           },
           properties: {
             name: `Delivery ${customer.id}`,
@@ -81,13 +82,13 @@ export class GISExporter {
         });
       }
 
-      if (pickupNode) {
-        const coords = this.transformCoordinates(pickupNode.x, pickupNode.y);
+      const pickupCoords = this.getNodeCoords(customer.pickupNodeId);
+      if (pickupCoords) {
         features.push({
           type: 'Feature',
           geometry: {
             type: 'Point',
-            coordinates: coords,
+            coordinates: pickupCoords,
           },
           properties: {
             name: `Pickup ${customer.id}`,
@@ -105,25 +106,14 @@ export class GISExporter {
       if (!route) continue;
 
       const coordinates: [number, number][] = [];
+      if (depotCoords) coordinates.push(depotCoords);
 
-      // Start from depot
-      const depotNode = this.problem.nodes[this.problem.depotNodeId];
-      if (depotNode) {
-        coordinates.push(this.transformCoordinates(depotNode.x, depotNode.y));
-      }
-
-      // Add all route nodes
       for (const nodeId of route.nodes) {
-        const node = this.problem.nodes[nodeId];
-        if (node) {
-          coordinates.push(this.transformCoordinates(node.x, node.y));
-        }
+        const nodeCoords = this.getNodeCoords(nodeId);
+        if (nodeCoords) coordinates.push(nodeCoords);
       }
 
-      // Return to depot
-      if (depotNode) {
-        coordinates.push(this.transformCoordinates(depotNode.x, depotNode.y));
-      }
+      if (depotCoords) coordinates.push(depotCoords);
 
       features.push({
         type: 'Feature',
@@ -136,7 +126,7 @@ export class GISExporter {
           type: 'route',
           vehicleId: route.vehicleId,
           color: colors[i % colors.length],
-          makespan: this.solution.nodeTimes[`depot_return_${i}` as unknown as number] ?? 0,
+          makespan: this.solution.nodeTimes[`depot_return_${i}`] ?? 0,
         },
       });
     }
@@ -148,7 +138,7 @@ export class GISExporter {
   }
 
   /**
-   * Exports solution as KML.
+   * @returns KML document string representing the solution
    */
   toKML(): string {
     const placemarks: KMLPlacemark[] = [];
@@ -160,22 +150,15 @@ export class GISExporter {
       if (!route) continue;
 
       const coordinates: [number, number][] = [];
-
-      const depotNode = this.problem.nodes[this.problem.depotNodeId];
-      if (depotNode) {
-        coordinates.push(this.transformCoordinates(depotNode.x, depotNode.y));
-      }
+      const depotCoords = this.getDepotCoords();
+      if (depotCoords) coordinates.push(depotCoords);
 
       for (const nodeId of route.nodes) {
-        const node = this.problem.nodes[nodeId];
-        if (node) {
-          coordinates.push(this.transformCoordinates(node.x, node.y));
-        }
+        const nodeCoords = this.getNodeCoords(nodeId);
+        if (nodeCoords) coordinates.push(nodeCoords);
       }
 
-      if (depotNode) {
-        coordinates.push(this.transformCoordinates(depotNode.x, depotNode.y));
-      }
+      if (depotCoords) coordinates.push(depotCoords);
 
       placemarks.push({
         name: `Route ${i + 1}`,
@@ -196,8 +179,8 @@ export class GISExporter {
 
     for (const pm of placemarks) {
       kml += '  <Placemark>\n';
-      kml += `    <name>${pm.name}</name>\n`;
-      kml += `    <description>${pm.description}</description>\n`;
+      kml += `    <name>${this.escapeXml(pm.name)}</name>\n`;
+      kml += `    <description>${this.escapeXml(pm.description)}</description>\n`;
 
       if (pm.style.strokeColor) {
         kml += '    <Style>\n';
@@ -225,7 +208,7 @@ export class GISExporter {
   }
 
   /**
-   * Exports solution as CSV for import into other tools.
+   * @returns CSV string with route, node, and timing data
    */
   toCSV(): string {
     let csv = 'Route,Vehicle,NodeId,NodeType,X,Y,ArrivalTime,Sequence\n';
@@ -234,9 +217,18 @@ export class GISExporter {
       const route = this.solution.routes[i];
       if (!route) continue;
 
-      const depotNode = this.problem.nodes[this.problem.depotNodeId];
+      const depotNode = this.getDepotNode();
       if (depotNode) {
-        csv += `${i},${route.vehicleId},${depotNode.id},depot,${depotNode.x},${depotNode.y},0,0\n`;
+        csv += [
+          i,
+          route.vehicleId,
+          depotNode.id,
+          'depot',
+          depotNode.x,
+          depotNode.y,
+          0,
+          0,
+        ].map(v => this.escapeCsv(v)).join(',') + '\n';
       }
 
       for (let seq = 0; seq < route.nodes.length; seq++) {
@@ -248,18 +240,52 @@ export class GISExporter {
         const nodeType = isDelivery ? 'delivery' : 'pickup';
         const arrivalTime = this.solution.nodeTimes[nodeId] ?? 0;
 
-        csv += `${i},${route.vehicleId},${nodeId},${nodeType},${node.x},${node.y},${arrivalTime},${seq + 1}\n`;
+        csv += [
+          i,
+          route.vehicleId,
+          nodeId,
+          nodeType,
+          node.x,
+          node.y,
+          arrivalTime,
+          seq + 1,
+        ].map(v => this.escapeCsv(v)).join(',') + '\n';
       }
 
       // Return to depot
       if (depotNode) {
         const returnKey = `depot_return_${i}`;
-        const returnTime = this.solution.nodeTimes[returnKey as unknown as number] ?? 0;
-        csv += `${i},${route.vehicleId},${depotNode.id},depot_return,${depotNode.x},${depotNode.y},${returnTime},${route.nodes.length + 1}\n`;
+        const returnTime = this.solution.nodeTimes[returnKey] ?? 0;
+        csv += [
+          i,
+          route.vehicleId,
+          depotNode.id,
+          'depot_return',
+          depotNode.x,
+          depotNode.y,
+          returnTime,
+          route.nodes.length + 1,
+        ].map(v => this.escapeCsv(v)).join(',') + '\n';
       }
     }
 
     return csv;
+  }
+
+  private getDepotNode() {
+    return this.problem.nodes[this.problem.depotNodeId];
+  }
+
+  private getDepotCoords(): [number, number] | null {
+    const depot = this.getDepotNode();
+    if (!depot) return null;
+    return this.transformCoordinates(depot.x, depot.y);
+  }
+
+  private getNodeCoords(nodeId: number): [number, number] | null {
+    const node = this.problem.nodes[nodeId];
+    if (!node) return null;
+    return this.transformCoordinates(node.x, node.y);
   }
 
   private transformCoordinates(x: number, y: number): [number, number] {
@@ -267,6 +293,22 @@ export class GISExporter {
       return this.coordinateTransform(x, y);
     }
     return [x, y];
+  }
+
+  private escapeXml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  private escapeCsv(value: string | number): string {
+    const str = String(value);
+    if (/[,"\n\r]/.test(str)) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
   }
 
   private rgbToKmlColor(rgb: string): string {

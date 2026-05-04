@@ -14,6 +14,10 @@ function isCustomerWithTimeWindows(customer: Customer): customer is CustomerWith
 export class Route {
   public readonly nodes: number[];
 
+  /**
+   * @param vehicleId - ID of the vehicle assigned to this route
+   * @param nodes - Ordered list of node IDs to visit
+   */
   constructor(
     public readonly vehicleId: number,
     nodes: number[] = [],
@@ -53,6 +57,10 @@ export class Solution {
   public totalCost: number;
   public totalCO2: number;
 
+  /**
+   * @param problem - Problem instance this solution solves
+   * @param routes - Vehicle routes; empty routes are created if not provided
+   */
   constructor(
     public readonly problem: Problem,
     routes: Route[] = [],
@@ -94,7 +102,7 @@ export class Solution {
           let arrivalTime = currentTime + travelTime;
 
           // Check if this node is a pickup
-          const pickupCustomer = this.problem.customers.find(c => c.pickupNodeId === nodeId);
+          const pickupCustomer = this.problem.pickupNodeMap.get(nodeId);
           if (pickupCustomer) {
             const readyTime = resourceReadyTimes[pickupCustomer.id] ?? 0;
             if (readyTime > arrivalTime) {
@@ -109,22 +117,22 @@ export class Solution {
             }
           }
 
+          // If this node is a delivery, enforce earliest delivery time before committing
+          const deliveryCustomer = this.problem.deliveryNodeMap.get(nodeId);
+          if (deliveryCustomer) {
+            if (isCustomerWithTimeWindows(deliveryCustomer)) {
+              if (arrivalTime < deliveryCustomer.earliestDeliveryTime) {
+                arrivalTime = deliveryCustomer.earliestDeliveryTime;
+              }
+            }
+          }
+
           if (nodeTimes[nodeId] !== arrivalTime) {
             nodeTimes[nodeId] = arrivalTime;
             changed = true;
 
-            // If this node is a delivery, update resource ready time
-            const deliveryCustomer = this.problem.customers.find(c => c.deliveryNodeId === nodeId);
             if (deliveryCustomer) {
               resourceReadyTimes[deliveryCustomer.id] = arrivalTime + deliveryCustomer.processingTime;
-
-              // Time window check for VRPTW
-              if (isCustomerWithTimeWindows(deliveryCustomer)) {
-                if (arrivalTime < deliveryCustomer.earliestDeliveryTime) {
-                  resourceReadyTimes[deliveryCustomer.id] =
-                    deliveryCustomer.earliestDeliveryTime + deliveryCustomer.processingTime;
-                }
-              }
             }
           }
 
@@ -157,51 +165,168 @@ export class Solution {
     // Calculate total distance
     this.totalDistance = this.calculateTotalDistance();
 
-    // Calculate total cost and CO2
+    // Calculate total cost and CO2 (per-route, per-vehicle)
     this.totalCost = 0;
     this.totalCO2 = 0;
     for (const route of this.routes) {
-      const vehicle = this.problem.vehicles.find(v => v.id === route.vehicleId);
-      if (vehicle) {
-        this.totalCost += this.totalDistance * vehicle.costPerKm;
-        this.totalCO2 += this.totalDistance * vehicle.co2PerKm;
-      }
+      const vehicle = this.problem.vehicleMap.get(route.vehicleId);
+      if (!vehicle) continue;
+
+      const routeDistance = this.calculateRouteDistance(route);
+      this.totalCost += routeDistance * vehicle.costPerKm;
+      this.totalCO2 += routeDistance * vehicle.co2PerKm;
     }
 
     return this.makespan;
   }
 
-  private calculateTotalDistance(): number {
-    let totalDistance = 0;
+  /**
+   * @param route - Route to measure
+   * @returns Total distance for the route including return to depot
+   */
+  calculateRouteDistance(route: Route): number {
+    let distance = 0;
+    let prevNode = this.problem.depotNodeId;
+    for (const nodeId of route.nodes) {
+      distance += this.problem.getDistance(prevNode, nodeId);
+      prevNode = nodeId;
+    }
+    distance += this.problem.getDistance(prevNode, this.problem.depotNodeId);
+    return distance;
+  }
 
-    for (const route of this.routes) {
-      let prevNode = this.problem.depotNodeId;
-      for (const nodeId of route.nodes) {
-        totalDistance += this.problem.getDistance(prevNode, nodeId);
-        prevNode = nodeId;
+  /**
+   * Evaluates a single route's depot return time given existing resource ready times.
+   * Single-pass: no while(changed) loop, no cross-route propagation.
+   */
+  evaluateRouteReturnTime(
+    route: Route,
+    baseResourceReadyTimes: Record<number, number>,
+    nodeReadyTimes?: Record<number, number>,
+  ): { returnTime: number; updatedReadyTimes: Record<number, number>; nodeArrivalTimes: Record<number, number> } {
+    let currentTime = 0;
+    let prevNode = this.problem.depotNodeId;
+    const updatedReadyTimes: Record<number, number> = { ...baseResourceReadyTimes };
+    const nodeArrivalTimes: Record<number, number> = {};
+
+    for (const nodeId of route.nodes) {
+      const travelTime = this.problem.getDistance(prevNode, nodeId);
+      let arrivalTime = currentTime + travelTime;
+
+      // Apply node-specific ready time (e.g. hub arrival from another route)
+      const nodeReady = nodeReadyTimes?.[nodeId];
+      if (nodeReady !== undefined && nodeReady > arrivalTime) {
+        arrivalTime = nodeReady;
       }
-      // Return to depot
-      totalDistance += this.problem.getDistance(prevNode, this.problem.depotNodeId);
+
+      const pickupCustomer = this.problem.pickupNodeMap.get(nodeId);
+      if (pickupCustomer) {
+        const readyTime = updatedReadyTimes[pickupCustomer.id] ?? 0;
+        if (readyTime > arrivalTime) arrivalTime = readyTime;
+        if (isCustomerWithTimeWindows(pickupCustomer)) {
+          if (arrivalTime < pickupCustomer.earliestPickupTime) {
+            arrivalTime = pickupCustomer.earliestPickupTime;
+          }
+        }
+      }
+
+      const deliveryCustomer = this.problem.deliveryNodeMap.get(nodeId);
+      if (deliveryCustomer) {
+        if (isCustomerWithTimeWindows(deliveryCustomer)) {
+          if (arrivalTime < deliveryCustomer.earliestDeliveryTime) {
+            arrivalTime = deliveryCustomer.earliestDeliveryTime;
+          }
+        }
+        updatedReadyTimes[deliveryCustomer.id] = arrivalTime + deliveryCustomer.processingTime;
+      }
+
+      nodeArrivalTimes[nodeId] = arrivalTime;
+      currentTime = arrivalTime;
+      prevNode = nodeId;
     }
 
+    const returnTime = currentTime + this.problem.getDistance(prevNode, this.problem.depotNodeId);
+    return { returnTime, updatedReadyTimes, nodeArrivalTimes };
+  }
+
+  /**
+   * Computes makespan if `routeIndex` is replaced with `newRoute`.
+   * Uses current route return times for all other routes.
+   */
+  evaluateMakespanWithRoute(routeIndex: number, newRoute: Route): number {
+    const { returnTime } = this.evaluateRouteReturnTime(newRoute, this.resourceReadyTimes);
+    let maxReturn = returnTime;
+    for (let i = 0; i < this.routes.length; i++) {
+      if (i === routeIndex) continue;
+      const key = `depot_return_${i}`;
+      const rt = this.nodeTimes[key] ?? 0;
+      if (rt > maxReturn) maxReturn = rt;
+    }
+    return maxReturn;
+  }
+
+  /**
+   * Computes makespan when two routes are replaced (for transfer scenarios).
+   */
+  evaluateMakespanWithTwoRoutes(
+    routeIndexA: number,
+    newRouteA: Route,
+    routeIndexB: number,
+    newRouteB: Route,
+    hubNodeId: number,
+  ): { makespan: number; hubReadyTime: number } {
+    const { returnTime: returnA, nodeArrivalTimes } = this.evaluateRouteReturnTime(
+      newRouteA,
+      this.resourceReadyTimes,
+    );
+
+    const hubReadyTime = nodeArrivalTimes[hubNodeId] ?? 0;
+
+    const { returnTime: returnB } = this.evaluateRouteReturnTime(
+      newRouteB,
+      this.resourceReadyTimes,
+      { [hubNodeId]: hubReadyTime },
+    );
+
+    let maxReturn = Math.max(returnA, returnB);
+    for (let i = 0; i < this.routes.length; i++) {
+      if (i === routeIndexA || i === routeIndexB) continue;
+      const key = `depot_return_${i}`;
+      const rt = this.nodeTimes[key] ?? 0;
+      if (rt > maxReturn) maxReturn = rt;
+    }
+    return { makespan: maxReturn, hubReadyTime };
+  }
+
+  private calculateTotalDistance(): number {
+    let totalDistance = 0;
+    for (const route of this.routes) {
+      totalDistance += this.calculateRouteDistance(route);
+    }
     return totalDistance;
   }
 
+  /**
+   * @returns True if the solution satisfies capacity, completeness, and time window constraints
+   */
   isFeasible(): boolean {
     return this.checkCapacity() && this.isComplete() && this.checkTimeWindows();
   }
 
+  /**
+   * @returns True if no vehicle exceeds its capacity at any point
+   */
   checkCapacity(): boolean {
     for (const route of this.routes) {
-      const vehicle = this.problem.vehicles.find(v => v.id === route.vehicleId);
+      const vehicle = this.problem.vehicleMap.get(route.vehicleId);
       const k = vehicle?.capacity ?? Infinity;
 
       // Calculate minimum initial load needed to satisfy all deliveries before pickups
       let minLoadNeeded = 0;
       let currentLoad = 0;
       for (const nodeId of route.nodes) {
-        const isDelivery = this.problem.customers.some(c => c.deliveryNodeId === nodeId);
-        const isPickup = this.problem.customers.some(c => c.pickupNodeId === nodeId);
+        const isDelivery = this.problem.deliveryNodeMap.has(nodeId);
+        const isPickup = this.problem.pickupNodeMap.has(nodeId);
         if (isDelivery) currentLoad--;
         if (isPickup) currentLoad++;
         if (currentLoad < minLoadNeeded) minLoadNeeded = currentLoad;
@@ -212,8 +337,8 @@ export class Solution {
       if (load > k) return false;
 
       for (const nodeId of route.nodes) {
-        const isDelivery = this.problem.customers.some(c => c.deliveryNodeId === nodeId);
-        const isPickup = this.problem.customers.some(c => c.pickupNodeId === nodeId);
+        const isDelivery = this.problem.deliveryNodeMap.has(nodeId);
+        const isPickup = this.problem.pickupNodeMap.has(nodeId);
         if (isDelivery) load--;
         if (isPickup) load++;
         if (load < 0 || load > k) return false;
@@ -222,6 +347,9 @@ export class Solution {
     return true;
   }
 
+  /**
+   * @returns True if every customer's delivery and pickup nodes are visited
+   */
   isComplete(): boolean {
     const visitedNodes = new Set<number>();
     for (const route of this.routes) {
@@ -237,6 +365,9 @@ export class Solution {
     return true;
   }
 
+  /**
+   * @returns True if all time window constraints are respected
+   */
   checkTimeWindows(): boolean {
     for (const customer of this.problem.customers) {
       if (isCustomerWithTimeWindows(customer)) {
@@ -253,6 +384,9 @@ export class Solution {
     return true;
   }
 
+  /**
+   * @returns Deep copy of this solution
+   */
   clone(): Solution {
     const cloned = new Solution(this.problem, this.routes.map(r => r.clone()));
     cloned.makespan = this.makespan;
@@ -265,7 +399,7 @@ export class Solution {
   }
 
   /**
-   * Returns Pareto objective vector for multi-objective optimization.
+   * @returns Pareto objective vector for multi-objective optimization
    */
   getObjectives(): Readonly<{
     makespan: number;

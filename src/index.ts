@@ -48,7 +48,7 @@ export type { GeoJSON, GeoJSONFeature, KMLPlacemark } from './export/GISExporter
 // Main solver class
 import { ALNS } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
-import { Problem } from './core/Problem.js';
+import type { Problem } from './core/Problem.js';
 import { Solution, Route } from './core/Solution.js';
 import { Worker } from 'worker_threads';
 import { resolve } from 'path';
@@ -84,14 +84,15 @@ export interface WorkerResult {
  *
  * Paper: arXiv:2602.23685v2
  */
-export class VRP_RPD_Solver {
+export class VrpRpdSolver {
+  /**
+   * @param problem - VRP-RPD problem instance to solve
+   */
   constructor(protected readonly problem: Problem) {}
 
   /**
-   * Solves the VRP-RPD problem using two-stage metaheuristic.
-   *
    * @param options - Solver configuration
-   * @returns Best solution found
+   * @returns Best solution found across both stages
    */
   async solve(options: SolveOptions = {}): Promise<Solution> {
     if (options.parallel) {
@@ -171,10 +172,35 @@ export class VRP_RPD_Solver {
         },
       });
 
-      worker.on('message', resolveResult);
-      worker.on('error', reject);
+      let settled = false;
+      worker.on('message', msg => {
+        if (!settled) {
+          settled = true;
+          worker.terminate().catch(() => {});
+          if (msg && typeof msg === 'object' && 'error' in msg) {
+            reject(new Error(`Worker ${type} failed: ${String(msg.error)}`));
+          } else {
+            resolveResult(msg as WorkerResult);
+          }
+        }
+      });
+      worker.on('error', err => {
+        if (!settled) {
+          settled = true;
+          worker.terminate().catch(() => {});
+          reject(err);
+        }
+      });
       worker.on('exit', code => {
-        if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
+        if (!settled) {
+          settled = true;
+          worker.terminate().catch(() => {});
+          if (code !== 0) {
+            reject(new Error(`Worker stopped with exit code ${code}`));
+          } else {
+            reject(new Error('Worker exited without producing a result'));
+          }
+        }
       });
     });
   }

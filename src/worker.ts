@@ -3,20 +3,7 @@ import { Problem, Node, Customer, Vehicle } from './core/Problem.js';
 import { Solution } from './core/Solution.js';
 import { ALNS } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
-
-interface WorkerData {
-  nodes: Record<number, { id: number; x: number; y: number; name: string }>;
-  customers: Array<{
-    id: number;
-    deliveryNodeId: number;
-    pickupNodeId: number;
-    processingTime: number;
-  }>;
-  vehicles: Array<{ id: number; capacity: number }>;
-  depotNodeId: number;
-  type: 'ALNS' | 'BRKGA';
-  options: Record<string, number>;
-}
+import { isWorkerData, validateWorkerData } from './workerValidation.js';
 
 interface WorkerResult {
   makespan: number;
@@ -24,7 +11,24 @@ interface WorkerResult {
   type: string;
 }
 
-const data = workerData as WorkerData;
+if (!isWorkerData(workerData)) {
+  parentPort?.postMessage({
+    error: 'Invalid workerData: expected { nodes, customers, vehicles, depotNodeId, type, options }',
+    type: 'unknown',
+  });
+  process.exit(1);
+}
+
+const validationError = validateWorkerData(workerData);
+if (validationError) {
+  parentPort?.postMessage({
+    error: `Invalid workerData: ${validationError}`,
+    type: workerData.type,
+  });
+  process.exit(1);
+}
+
+const data = workerData;
 
 // Reconstruct problem from serialized data
 const nodes: Record<number, Node> = {};
@@ -40,20 +44,25 @@ const vehicles = data.vehicles.map(v => new Vehicle(v.id, v.capacity));
 
 const problem = new Problem(nodes, customers, vehicles, data.depotNodeId);
 
-let solution: Solution;
+try {
+  let solution: Solution;
 
-if (data.type === 'ALNS') {
-  const alns = new ALNS(problem, data.options);
-  solution = alns.solve();
-} else {
-  const brkga = new BRKGA(problem, data.options);
-  solution = brkga.solve();
+  if (data.type === 'ALNS') {
+    const alns = new ALNS(problem, data.options);
+    solution = alns.solve();
+  } else {
+    const brkga = new BRKGA(problem, data.options);
+    solution = brkga.solve();
+  }
+
+  const result: WorkerResult = {
+    makespan: solution.makespan,
+    routes: solution.routes.map(r => ({ vehicleId: r.vehicleId, nodes: r.nodes })),
+    type: data.type,
+  };
+
+  parentPort?.postMessage(result);
+} catch (err) {
+  const errorMessage = err instanceof Error ? err.message : String(err);
+  parentPort?.postMessage({ error: errorMessage, type: data.type });
 }
-
-const result: WorkerResult = {
-  makespan: solution.makespan,
-  routes: solution.routes.map(r => ({ vehicleId: r.vehicleId, nodes: r.nodes })),
-  type: data.type,
-};
-
-parentPort?.postMessage(result);

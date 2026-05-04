@@ -45,6 +45,10 @@ export class ALNS {
 
   protected temp: number;
 
+  /**
+   * @param problem - VRP-RPD problem instance to solve
+   * @param options - ALNS configuration options
+   */
   constructor(problem: Problem, options: ALNSOptions = {}) {
     this.problem = problem;
 
@@ -94,12 +98,18 @@ export class ALNS {
     this.temp = this.initialTemp;
   }
 
+  /**
+   * @returns Initial feasible solution built with greedy insertion
+   */
   generateInitialSolution(): Solution {
     const routes = this.problem.vehicles.map(v => new Route(v.id, []));
     const emptySolution = new Solution(this.problem, routes);
     return InsertionOperators.greedyInsertion(emptySolution, this.problem.customers);
   }
 
+  /**
+   * @returns Best solution found after maxIterations
+   */
   solve(): Solution {
     let currentSolution = this.generateInitialSolution();
     let bestSolution = currentSolution.clone();
@@ -114,8 +124,8 @@ export class ALNS {
       const insertionOp =
         InsertionOperators[this.insertionOps[iIdx] as keyof typeof InsertionOperators];
 
-      this.usage.removal[rIdx]!++;
-      this.usage.insertion[iIdx]!++;
+      this.usage.removal[rIdx] = (this.usage.removal[rIdx] ?? 0) + 1;
+      this.usage.insertion[iIdx] = (this.usage.insertion[iIdx] ?? 0) + 1;
 
       // Adaptive removal size based on problem scale
       const k = Math.max(
@@ -138,8 +148,8 @@ export class ALNS {
         score = this.scoreAccepted; // Paper: 13
       }
 
-      this.scores.removal[rIdx]! += score;
-      this.scores.insertion[iIdx]! += score;
+      this.scores.removal[rIdx] = (this.scores.removal[rIdx] ?? 0) + score;
+      this.scores.insertion[iIdx] = (this.scores.insertion[iIdx] ?? 0) + score;
 
       if (score > 0) {
         currentSolution = newSolution;
@@ -161,20 +171,22 @@ export class ALNS {
   protected updateWeights(): void {
     for (let i = 0; i < this.removalWeights.length; i++) {
       const usageVal = this.usage.removal[i];
-      if (usageVal !== undefined && usageVal > 0) {
-        const avgScore = this.scores.removal[i]! / usageVal;
-        this.removalWeights[i] =
-          (1 - this.lambda) * this.removalWeights[i]! + this.lambda * avgScore;
+      const scoreVal = this.scores.removal[i];
+      const weightVal = this.removalWeights[i];
+      if (usageVal !== undefined && usageVal > 0 && scoreVal !== undefined && weightVal !== undefined) {
+        const avgScore = scoreVal / usageVal;
+        this.removalWeights[i] = (1 - this.lambda) * weightVal + this.lambda * avgScore;
         this.scores.removal[i] = 0;
         this.usage.removal[i] = 0;
       }
     }
     for (let i = 0; i < this.insertionWeights.length; i++) {
       const usageVal = this.usage.insertion[i];
-      if (usageVal !== undefined && usageVal > 0) {
-        const avgScore = this.scores.insertion[i]! / usageVal;
-        this.insertionWeights[i] =
-          (1 - this.lambda) * this.insertionWeights[i]! + this.lambda * avgScore;
+      const scoreVal = this.scores.insertion[i];
+      const weightVal = this.insertionWeights[i];
+      if (usageVal !== undefined && usageVal > 0 && scoreVal !== undefined && weightVal !== undefined) {
+        const avgScore = scoreVal / usageVal;
+        this.insertionWeights[i] = (1 - this.lambda) * weightVal + this.lambda * avgScore;
         this.scores.insertion[i] = 0;
         this.usage.insertion[i] = 0;
       }
@@ -183,6 +195,9 @@ export class ALNS {
 
   protected selectOperator(weights: number[]): number {
     const sum = weights.reduce((a, b) => a + b, 0);
+    if (sum <= 0) {
+      return Math.floor(Math.random() * weights.length);
+    }
     let r = Math.random() * sum;
     for (let i = 0; i < weights.length; i++) {
       r -= weights[i]!;
@@ -198,7 +213,7 @@ export class ALNS {
   }
 
   /**
-   * Gets the operator statistics for analysis.
+   * @returns Current operator weights and names for analysis
    */
   getOperatorStats(): {
     removalWeights: number[];

@@ -18,6 +18,14 @@ export const TransferAwareInsertionOperators = {
   ): SolutionWithTransfers {
     const newSolution = solution.clone();
 
+    // Track transfers to schedule after the full schedule is calculated
+    const pendingTransfers: Array<{
+      hubId: number;
+      fromVehicleId: number;
+      toVehicleId: number;
+      amount: number;
+    }> = [];
+
     for (const customer of customers) {
       let bestCost = Infinity;
       let bestConfig: {
@@ -69,6 +77,13 @@ export const TransferAwareInsertionOperators = {
               const pickupRoute = newSolution.routes[pRouteIdx];
               if (!deliveryRoute || !pickupRoute) continue;
 
+              // Geographic pruning: skip hub if it is unreasonably far
+              const directDist = solution.problem.getDistance(customer.deliveryNodeId, customer.pickupNodeId);
+              const viaHubDist =
+                solution.problem.getDistance(customer.deliveryNodeId, hub.id) +
+                solution.problem.getDistance(hub.id, customer.pickupNodeId);
+              if (viaHubDist > directDist * 2) continue;
+
               // Try inserting delivery -> hub in delivery route
               for (let dPos = 0; dPos <= deliveryRoute.nodes.length; dPos++) {
                 // Try inserting hub -> pickup in pickup route
@@ -79,22 +94,25 @@ export const TransferAwareInsertionOperators = {
                   testDeliveryRoute.nodes.splice(dPos, 0, customer.deliveryNodeId, hub.id);
                   testPickupRoute.nodes.splice(pPos, 0, hub.id, customer.pickupNodeId);
 
-                  const testSolution = newSolution.clone();
-                  testSolution.routes[dRouteIdx] = testDeliveryRoute;
-                  testSolution.routes[pRouteIdx] = testPickupRoute;
-                  testSolution.calculateSchedule();
+                  const { makespan: testMakespan, hubReadyTime } =
+                    newSolution.evaluateMakespanWithTwoRoutes(
+                      dRouteIdx,
+                      testDeliveryRoute,
+                      pRouteIdx,
+                      testPickupRoute,
+                      hub.id,
+                    );
 
-                  // Check if transfer is feasible
-                  const transferFeasible = testSolution.scheduleTransfer(
+                  const transferFeasible = newSolution.canScheduleTransfer(
                     hub.id,
                     deliveryRoute.vehicleId,
                     pickupRoute.vehicleId,
-                    1, // unit amount
-                    testSolution.nodeTimes[hub.id] ?? 0,
+                    1,
+                    hubReadyTime,
                   );
 
-                  if (transferFeasible && testSolution.makespan < bestCost) {
-                    bestCost = testSolution.makespan;
+                  if (transferFeasible && testMakespan < bestCost) {
+                    bestCost = testMakespan;
                     bestConfig = {
                       deliveryRouteIndex: dRouteIdx,
                       pickupRouteIndex: pRouteIdx,
@@ -129,6 +147,12 @@ export const TransferAwareInsertionOperators = {
               bestConfig.hubId,
               customer.pickupNodeId,
             );
+            pendingTransfers.push({
+              hubId: bestConfig.hubId,
+              fromVehicleId: deliveryRoute.vehicleId,
+              toVehicleId: pickupRoute.vehicleId,
+              amount: 1,
+            });
           }
         } else {
           const route = newSolution.routes[bestConfig.deliveryRouteIndex];
@@ -141,6 +165,19 @@ export const TransferAwareInsertionOperators = {
     }
 
     newSolution.calculateSchedule();
+
+    // Schedule pending transfers using calculated arrival times
+    for (const pt of pendingTransfers) {
+      const transferTime = newSolution.nodeTimes[pt.hubId] ?? 0;
+      newSolution.scheduleTransfer(
+        pt.hubId,
+        pt.fromVehicleId,
+        pt.toVehicleId,
+        pt.amount,
+        transferTime,
+      );
+    }
+
     return newSolution;
   },
 };

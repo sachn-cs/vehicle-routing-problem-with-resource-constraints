@@ -1,4 +1,5 @@
-import { Node, Customer, Vehicle, Problem } from './Problem.js';
+import type { Node, Customer, Vehicle } from './Problem.js';
+import { Problem } from './Problem.js';
 
 /**
  * Traffic data for a road segment between two nodes.
@@ -20,17 +21,11 @@ export class TrafficModel {
   private readonly timeFactors: Map<string, Array<{ startTime: number; factor: number }>> =
     new Map();
 
-  /**
-   * Sets base traffic data for a segment.
-   */
   setSegment(segment: TrafficSegment): void {
     const key = this.makeKey(segment.fromId, segment.toId);
     this.segments.set(key, segment);
   }
 
-  /**
-   * Sets time-dependent factors for a segment.
-   */
   setTimeFactors(fromId: number, toId: number, factors: Array<{ startTime: number; factor: number }>): void {
     const key = this.makeKey(fromId, toId);
     this.timeFactors.set(key, factors);
@@ -41,7 +36,10 @@ export class TrafficModel {
   }
 
   /**
-   * Gets travel time between two nodes at a specific departure time.
+   * @param fromId - Origin node ID
+   * @param toId - Destination node ID
+   * @param departureTime - Time of departure
+   * @returns Travel time adjusted for traffic conditions
    */
   getTravelTime(fromId: number, toId: number, departureTime: number = 0): number {
     const key = this.makeKey(fromId, toId);
@@ -66,9 +64,6 @@ export class TrafficModel {
     return segment.currentTravelTime;
   }
 
-  /**
-   * Gets congestion level for a segment.
-   */
   getCongestionLevel(fromId: number, toId: number): 'low' | 'medium' | 'high' | 'severe' | undefined {
     const key = this.makeKey(fromId, toId);
     const segment = this.segments.get(key);
@@ -76,7 +71,9 @@ export class TrafficModel {
   }
 
   /**
-   * Updates traffic conditions in real-time.
+   * @param fromId - Origin node ID
+   * @param toId - Destination node ID
+   * @param newTravelTime - Updated travel time for the segment
    */
   updateTraffic(fromId: number, toId: number, newTravelTime: number): void {
     const key = this.makeKey(fromId, toId);
@@ -98,6 +95,14 @@ export class TrafficModel {
  * Extends base Problem with real-time traffic data.
  */
 export class TrafficAwareProblem extends Problem {
+  /**
+   * @param nodes - Available nodes by ID
+   * @param customers - Customers to serve
+   * @param vehicles - Fleet vehicles
+   * @param depotNodeId - Default depot node
+   * @param trafficModel - Traffic conditions model
+   * @param defaultSpeed - Baseline vehicle speed
+   */
   constructor(
     nodes: Readonly<Record<number, Node>>,
     customers: ReadonlyArray<Customer>,
@@ -109,18 +114,10 @@ export class TrafficAwareProblem extends Problem {
     super(nodes, customers, vehicles, depotNodeId);
   }
 
-  override getDistance(fromId: number, toId: number): number {
-    // Return travel time instead of pure distance
-    return this.trafficModel.getTravelTime(fromId, toId, 0);
-  }
-
   override getTravelTime(fromId: number, toId: number, departureTime: number = 0): number {
     return this.trafficModel.getTravelTime(fromId, toId, departureTime);
   }
 
-  /**
-   * Initializes traffic model from base distance matrix.
-   */
   initializeTrafficFromDistances(): void {
     const nodeIds = Object.keys(this.nodes).map(Number);
     for (const fromId of nodeIds) {
@@ -140,7 +137,9 @@ export class TrafficAwareProblem extends Problem {
   }
 
   /**
-   * Applies traffic multiplier to simulate congestion.
+   * @param fromId - Origin node ID
+   * @param toId - Destination node ID
+   * @param multiplier - Factor to apply to base travel time
    */
   applyTrafficMultiplier(fromId: number, toId: number, multiplier: number): void {
     const baseTime = this.distanceMatrix[fromId]?.[toId] ?? 0;

@@ -38,15 +38,22 @@ export interface RouteComparison {
  * Provides insights into vehicle utilization, wait times, and route efficiency.
  */
 export class RouteAnalytics {
+  /**
+   * @param solution - Solution to analyze
+   * @param problem - Problem instance the solution solves
+   */
   constructor(private readonly solution: Solution, private readonly problem: Problem) {}
 
   /**
-   * Calculates vehicle utilization metrics for all routes.
+   * @returns Per-route vehicle utilization metrics
    */
   getVehicleUtilization(): VehicleUtilization[] {
     const results: VehicleUtilization[] = [];
 
-    for (const route of this.solution.routes) {
+    for (let i = 0; i < this.solution.routes.length; i++) {
+      const route = this.solution.routes[i];
+      if (!route) continue;
+
       const vehicle = this.problem.vehicles.find(v => v.id === route.vehicleId);
       if (!vehicle) continue;
 
@@ -73,19 +80,8 @@ export class RouteAnalytics {
       const initialLoad = -maxLoadNeeded;
       const utilizationRate = vehicle.capacity > 0 ? initialLoad / vehicle.capacity : 0;
 
-      // Calculate total distance for this route
-      let routeDistance = 0;
-      let prevNode = this.problem.depotNodeId;
-      for (const nodeId of route.nodes) {
-        routeDistance += this.problem.getDistance(prevNode, nodeId);
-        prevNode = nodeId;
-      }
-      routeDistance += this.problem.getDistance(prevNode, this.problem.depotNodeId);
-
-      // Calculate total time (makespan contribution)
-      const routeReturnKey = `depot_return_${this.solution.routes.indexOf(route)}`;
-      const totalTime =
-        this.solution.nodeTimes[routeReturnKey as unknown as number] ?? 0;
+      const routeDistance = this.solution.calculateRouteDistance(route);
+      const totalTime = this.solution.nodeTimes[`depot_return_${i}`] ?? 0;
 
       results.push({
         vehicleId: route.vehicleId,
@@ -102,7 +98,7 @@ export class RouteAnalytics {
   }
 
   /**
-   * Analyzes wait times at each node.
+   * @returns Wait time breakdown per node
    */
   getWaitTimes(): WaitTimeAnalysis[] {
     const results: WaitTimeAnalysis[] = [];
@@ -147,7 +143,8 @@ export class RouteAnalytics {
   }
 
   /**
-   * Generates load-over-time data for a specific route.
+   * @param routeIndex - Route to analyze
+   * @returns Load values over time for the route
    */
   getLoadOverTime(routeIndex: number): LoadOverTime[] {
     const route = this.solution.routes[routeIndex];
@@ -194,7 +191,7 @@ export class RouteAnalytics {
   }
 
   /**
-   * Compares all routes side-by-side.
+   * @returns Side-by-side comparison of all routes
    */
   compareRoutes(): RouteComparison[] {
     const results: RouteComparison[] = [];
@@ -206,20 +203,11 @@ export class RouteAnalytics {
       const vehicle = this.problem.vehicles.find(v => v.id === route.vehicleId);
       if (!vehicle) continue;
 
-      // Calculate route-specific metrics
-      let routeDistance = 0;
-      let prevNode = this.problem.depotNodeId;
-      for (const nodeId of route.nodes) {
-        routeDistance += this.problem.getDistance(prevNode, nodeId);
-        prevNode = nodeId;
-      }
-      routeDistance += this.problem.getDistance(prevNode, this.problem.depotNodeId);
-
+      const routeDistance = this.solution.calculateRouteDistance(route);
       const routeCost = routeDistance * vehicle.costPerKm;
       const routeCO2 = routeDistance * vehicle.co2PerKm;
 
-      const routeReturnKey = `depot_return_${i}`;
-      const routeMakespan = this.solution.nodeTimes[routeReturnKey as unknown as number] ?? 0;
+      const routeMakespan = this.solution.nodeTimes[`depot_return_${i}`] ?? 0;
 
       // Efficiency: customers served per unit distance
       const customerCount = route.nodes.length / 2;
@@ -240,7 +228,7 @@ export class RouteAnalytics {
   }
 
   /**
-   * Generates summary statistics for the entire solution.
+   * @returns Aggregated statistics for the entire solution
    */
   getSummary(): {
     totalCustomers: number;

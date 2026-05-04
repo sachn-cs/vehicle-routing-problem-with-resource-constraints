@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript conversion with strict mode enabled
 - Multi-objective optimization support (Pareto fronts)
 - Time Windows (VRPTW) support via `CustomerWithTimeWindows` class
-- Multi-deot problem support via `MultiDepotProblem` class
+- Multi-depot problem support via `MultiDepotProblem` class
 - Traffic-aware routing via `TrafficAwareProblem` and `TrafficModel` classes
 - Inter-vehicle resource transfer via `TransferHub` and `TransferManager`
 - Vehicle capabilities system via `VehicleWithCapabilities` and `VehicleFleetManager`
