@@ -22,6 +22,14 @@ export interface ResourceTransfer {
  * Hub node where vehicles can exchange resources.
  */
 export class TransferHub {
+  /**
+   * @param id - Unique hub identifier
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param name - Optional display name
+   * @param maxConcurrentTransfers - Maximum simultaneous transfers allowed
+   * @param transferTimePerUnit - Time required to transfer one unit of resource
+   */
   constructor(
     public readonly id: number,
     public readonly x: number,
@@ -40,22 +48,17 @@ export class TransferManager {
   private readonly hubs: Map<number, TransferHub> = new Map();
   private readonly vehicleSchedules: Map<number, Array<{ startTime: number; endTime: number; hubId: number }>> = new Map();
 
-  /**
-   * Registers a transfer hub.
-   */
   registerHub(hub: TransferHub): void {
     this.hubs.set(hub.id, hub);
   }
 
-  /**
-   * Gets a hub by ID.
-   */
   getHub(hubId: number): TransferHub | undefined {
     return this.hubs.get(hubId);
   }
 
   /**
-   * Schedules a resource transfer between vehicles.
+   * @param transfer - Transfer event to schedule
+   * @returns True if the transfer was successfully scheduled without conflicts
    */
   scheduleTransfer(transfer: ResourceTransfer): boolean {
     const hub = this.hubs.get(transfer.hubNodeId);
@@ -82,6 +85,17 @@ export class TransferManager {
       return false; // Conflict detected
     }
 
+    // Check hub concurrency limit
+    const concurrentAtHub = Array.from(this.transfers.values()).filter(t => {
+      if (t.hubNodeId !== transfer.hubNodeId) return false;
+      const tDuration = t.amount * hub.transferTimePerUnit;
+      const tEnd = t.transferTime + tDuration;
+      return transfer.transferTime < tEnd && endTime > t.transferTime;
+    }).length;
+    if (concurrentAtHub >= hub.maxConcurrentTransfers) {
+      return false;
+    }
+
     // Schedule the transfer
     this.transfers.set(transfer.id, transfer);
 
@@ -103,16 +117,10 @@ export class TransferManager {
     return true;
   }
 
-  /**
-   * Gets all transfers for a specific hub.
-   */
   getTransfersForHub(hubId: number): ResourceTransfer[] {
     return Array.from(this.transfers.values()).filter(t => t.hubNodeId === hubId);
   }
 
-  /**
-   * Gets all transfers involving a specific vehicle.
-   */
   getTransfersForVehicle(vehicleId: number): ResourceTransfer[] {
     return Array.from(this.transfers.values()).filter(
       t => t.fromVehicleId === vehicleId || t.toVehicleId === vehicleId,
@@ -120,8 +128,9 @@ export class TransferManager {
   }
 
   /**
-   * Gets the net resource balance for a vehicle from all transfers.
-   * Positive = received, negative = given.
+   * @param vehicleId - Vehicle to calculate balance for
+   * @param resourceType - Optional resource type filter
+   * @returns Net resource balance; positive means received, negative means given
    */
   getVehicleNetBalance(vehicleId: number, resourceType?: string): number {
     let balance = 0;
@@ -137,26 +146,21 @@ export class TransferManager {
     return balance;
   }
 
-  /**
-   * Checks if a vehicle is at a hub at a specific time.
-   */
   isVehicleAtHub(vehicleId: number, hubId: number, time: number): boolean {
     const schedule = this.vehicleSchedules.get(vehicleId) || [];
     return schedule.some(s => s.hubId === hubId && s.startTime <= time && s.endTime >= time);
   }
 
-  /**
-   * Clears all scheduled transfers.
-   */
   clearAll(): void {
     this.transfers.clear();
     this.vehicleSchedules.clear();
   }
 
-  /**
-   * Gets all scheduled transfers.
-   */
   getAllTransfers(): readonly ResourceTransfer[] {
     return Array.from(this.transfers.values());
+  }
+
+  getAllHubs(): readonly TransferHub[] {
+    return Array.from(this.hubs.values());
   }
 }

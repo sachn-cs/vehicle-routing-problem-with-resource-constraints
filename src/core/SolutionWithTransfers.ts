@@ -1,5 +1,6 @@
 import { Solution, Route } from './Solution.js';
-import { Problem, Customer } from './Problem.js';
+import { Problem } from './Problem.js';
+import type { Customer, Node } from './Problem.js';
 import { TransferManager, ResourceTransfer, TransferHub } from './ResourceTransfer.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from './VehicleWithCapabilities.js';
 
@@ -11,6 +12,12 @@ export class SolutionWithTransfers extends Solution {
   public readonly fleetManager: VehicleFleetManager;
   public transfers: ResourceTransfer[] = [];
 
+  /**
+   * @param problem - Base problem instance
+   * @param routes - Initial vehicle routes
+   * @param transferHubs - Hubs where vehicles can exchange resources
+   * @param vehicles - Fleet vehicles with transfer capabilities
+   */
   constructor(
     problem: Problem,
     routes: Route[] = [],
@@ -31,7 +38,13 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Schedules a resource transfer between vehicles.
+   * @param hubNodeId - Hub where the transfer occurs
+   * @param fromVehicleId - Vehicle giving resources
+   * @param toVehicleId - Vehicle receiving resources
+   * @param amount - Quantity to transfer
+   * @param transferTime - Scheduled start time
+   * @param resourceType - Optional resource category
+   * @returns True if the transfer was successfully scheduled
    */
   scheduleTransfer(
     hubNodeId: number,
@@ -59,7 +72,7 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Validates that all scheduled transfers are feasible.
+   * @returns Validation result with any feasibility errors
    */
   validateTransfers(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -107,7 +120,7 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Calculates the total time including transfer delays.
+   * @returns Total schedule duration including transfer delays
    */
   calculateTotalTimeWithTransfers(): number {
     let maxTime = this.makespan;
@@ -127,7 +140,7 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Gets the net resource balance for each vehicle.
+   * @returns Net resource balance per vehicle from all transfers
    */
   getVehicleResourceBalances(): Array<{
     vehicleId: number;
@@ -175,8 +188,37 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Overrides isFeasible to include transfer validation.
+   * Checks whether a transfer can be scheduled without mutating this solution.
+   * Creates a temporary TransferManager with existing transfers and tests the new one.
    */
+  canScheduleTransfer(
+    hubNodeId: number,
+    fromVehicleId: number,
+    toVehicleId: number,
+    amount: number,
+    transferTime: number,
+    resourceType?: string,
+  ): boolean {
+    const tempManager = new TransferManager();
+    const hub = this.transferManager.getHub(hubNodeId);
+    if (hub) tempManager.registerHub(hub);
+
+    for (const t of this.transfers) {
+      tempManager.scheduleTransfer(t);
+    }
+
+    const transfer: ResourceTransfer = {
+      id: `transfer-${fromVehicleId}-${toVehicleId}-${hubNodeId}-${transferTime}`,
+      hubNodeId,
+      transferTime,
+      fromVehicleId,
+      toVehicleId,
+      amount,
+      resourceType,
+    };
+    return tempManager.scheduleTransfer(transfer);
+  }
+
   override isFeasible(): boolean {
     const baseFeasible = super.isFeasible();
     const transfersValid = this.validateTransfers();
@@ -184,7 +226,7 @@ export class SolutionWithTransfers extends Solution {
   }
 
   /**
-   * Gets transfer summary statistics.
+   * @returns Aggregated statistics for all scheduled transfers
    */
   getTransferSummary(): {
     totalTransfers: number;
@@ -218,19 +260,12 @@ export class SolutionWithTransfers extends Solution {
     };
   }
 
-  /**
-   * Clones the solution including transfers.
-   */
   override clone(): SolutionWithTransfers {
     const cloned = new SolutionWithTransfers(
       this.problem,
       this.routes.map(r => r.clone()),
-      Array.from(this.transferManager.getAllTransfers()).map(t =>
-        this.transferManager.getHub(t.hubNodeId)
-      ).filter((h): h is TransferHub => h !== undefined),
-      Array.from(this.fleetManager.getFleetUtilization()).map(u =>
-        this.fleetManager.getVehicle(u.vehicleId)
-      ).filter((v): v is VehicleWithCapabilities => v !== undefined),
+      [...this.transferManager.getAllHubs()],
+      [...this.fleetManager.getAllVehicles()],
     );
 
     cloned.makespan = this.makespan;
@@ -249,8 +284,15 @@ export class SolutionWithTransfers extends Solution {
  * Problem instance with transfer hub support.
  */
 export class ProblemWithTransfers extends Problem {
+  /**
+   * @param nodes - Available nodes by ID
+   * @param customers - Customers to serve
+   * @param vehicles - Fleet with transfer capabilities
+   * @param depotNodeId - Default depot node
+   * @param transferHubs - Hubs where vehicles exchange resources
+   */
   constructor(
-    nodes: Readonly<Record<number, import('./Problem.js').Node>>,
+    nodes: Readonly<Record<number, Node>>,
     customers: ReadonlyArray<Customer>,
     vehicles: ReadonlyArray<VehicleWithCapabilities>,
     depotNodeId: number = 0,
@@ -259,16 +301,10 @@ export class ProblemWithTransfers extends Problem {
     super(nodes, customers, vehicles, depotNodeId);
   }
 
-  /**
-   * Checks if a node is a transfer hub.
-   */
   isTransferHub(nodeId: number): boolean {
     return this.transferHubs.some(h => h.id === nodeId);
   }
 
-  /**
-   * Gets the transfer hub for a node.
-   */
   getTransferHub(nodeId: number): TransferHub | undefined {
     return this.transferHubs.find(h => h.id === nodeId);
   }

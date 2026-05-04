@@ -43,6 +43,10 @@ export class BRKGA {
   protected readonly warmStartSolution: Solution | null;
   protected readonly warmStartProportion: number;
 
+  /**
+   * @param problem - VRP-RPD problem instance to solve
+   * @param options - BRKGA configuration options
+   */
   constructor(problem: Problem, options: BRKGAOptions = {}) {
     this.problem = problem;
 
@@ -66,12 +70,12 @@ export class BRKGA {
       throw new Error('Warm-start proportion must be between 0 and 1 (exclusive)');
     }
 
-    // Paper defaults
-    this.populationSize = options.populationSize ?? 30000;  // Paper spec
+    // Practical library defaults (paper spec: 30,000 pop / 20,000 gen)
+    this.populationSize = options.populationSize ?? 100;
     this.eliteFraction = options.eliteFraction ?? 0.15;     // Paper spec
     this.mutantFraction = options.mutantFraction ?? 0.10;   // Paper spec
     this.crossoverProb = options.crossoverProb ?? 0.7;
-    this.maxGenerations = options.maxGenerations ?? 20000; // Paper spec
+    this.maxGenerations = options.maxGenerations ?? 100;    // Practical default
 
     // Warm-start from ALNS
     this.warmStartSolution = options.warmStartSolution ?? null;
@@ -81,6 +85,9 @@ export class BRKGA {
     this.chromosomeSize = problem.customers.length; // n genes per component (4 components)
   }
 
+  /**
+   * @returns Best solution found after convergence or max generations
+   */
   solve(): Solution {
     let population = this.initializePopulation();
     let bestIndividual: Individual | null = null;
@@ -101,11 +108,23 @@ export class BRKGA {
       population.sort((a, b) => (a.fitness ?? Infinity) - (b.fitness ?? Infinity));
 
       // Update best
+      const top = population[0];
+      const topFitness = top?.fitness ?? Infinity;
       if (
         !bestIndividual ||
-        (population[0]?.fitness ?? Infinity) < bestIndividual.fitness!
+        (bestIndividual.fitness !== null && topFitness < bestIndividual.fitness)
       ) {
-        bestIndividual = { ...population[0]! };
+        if (!top) continue;
+        bestIndividual = {
+          chromosome: {
+            priorities: [...top.chromosome.priorities],
+            assignments: [...top.chromosome.assignments],
+            dependencies: [...top.chromosome.dependencies],
+            transfers: [...top.chromosome.transfers],
+          },
+          fitness: top.fitness,
+          solution: top.solution?.clone() ?? null,
+        };
         generationsWithoutImprovement = 0;
       } else {
         generationsWithoutImprovement++;
@@ -122,7 +141,10 @@ export class BRKGA {
       // Elite preservation
       const eliteCount = Math.floor(this.populationSize * this.eliteFraction);
       for (let i = 0; i < eliteCount; i++) {
-        nextPopulation.push({ ...population[i]! });
+        const elite = population[i];
+        if (elite) {
+          nextPopulation.push({ ...elite });
+        }
       }
 
       // Mutants (random individuals)
@@ -147,7 +169,7 @@ export class BRKGA {
       population = nextPopulation;
 
       // Progress logging for long runs (every 1000 generations)
-      if (g % 1000 === 0 && bestIndividual) {
+      if (g % 10 === 0 && bestIndividual) {
         console.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
       }
     }
@@ -264,7 +286,8 @@ export class BRKGA {
   }
 
   /**
-   * Gets the current best solution found.
+   * @param population - Current population to search
+   * @returns Best feasible solution in the population
    */
   getBestSolution(population: Individual[]): Solution | null {
     const sorted = [...population].sort(

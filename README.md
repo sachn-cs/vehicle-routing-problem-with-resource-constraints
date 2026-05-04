@@ -37,7 +37,7 @@ npm install
 ## Quick Start
 
 ```typescript
-import { VRP_RPD_Solver, Problem, Node, Customer, Vehicle } from './src/index.js';
+import { VrpRpdSolver, Problem, Node, Customer, Vehicle } from './src/index.js';
 
 // Define problem
 const nodes = {
@@ -50,7 +50,7 @@ const customers = [new Customer(1, 1, 2, 50)]; // id, delivery, pickup, processi
 const vehicles = [new Vehicle(0, 5)]; // id, capacity
 
 const problem = new Problem(nodes, customers, vehicles, 0);
-const solver = new VRP_RPD_Solver(problem);
+const solver = new VrpRpdSolver(problem);
 
 // Solve
 const solution = await solver.solve({

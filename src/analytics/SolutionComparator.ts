@@ -30,13 +30,18 @@ export interface ParetoFront {
  * Useful for comparing different solver configurations or algorithms.
  */
 export class SolutionComparator {
+  /**
+   * @param solutions - Solutions to compare
+   * @param problem - Problem instance the solutions solve
+   */
   constructor(
     private readonly solutions: Solution[],
     private readonly problem: Problem,
   ) {}
 
   /**
-   * Gets comprehensive metrics for a solution.
+   * @param solutionIndex - Index of the solution to evaluate
+   * @returns Comprehensive metrics for the requested solution
    */
   getMetrics(solutionIndex: number): SolutionMetrics | undefined {
     const solution = this.solutions[solutionIndex];
@@ -57,7 +62,8 @@ export class SolutionComparator {
   }
 
   /**
-   * Compares a specific metric across all solutions.
+   * @param metric - Metric to compare across solutions
+   * @returns Comparison result with best, worst, and improvement
    */
   compareMetric(metric: keyof SolutionMetrics): ComparisonResult | undefined {
     const metrics = this.solutions
@@ -97,7 +103,7 @@ export class SolutionComparator {
   }
 
   /**
-   * Gets all comparison results.
+   * @returns Comparison results for all tracked metrics
    */
   getAllComparisons(): Record<string, ComparisonResult> {
     const results: Record<string, ComparisonResult> = {};
@@ -121,8 +127,8 @@ export class SolutionComparator {
   }
 
   /**
-   * Finds Pareto-optimal solutions.
    * A solution is Pareto-optimal if no other solution dominates it in all objectives.
+   * @returns Indices and objective vectors of Pareto-optimal solutions
    */
   findParetoFront(): ParetoFront {
     const metrics = this.solutions
@@ -175,7 +181,7 @@ export class SolutionComparator {
   }
 
   /**
-   * Generates a summary report comparing all solutions.
+   * @returns Human-readable report comparing all solutions
    */
   generateReport(): string {
     const comparisons = this.getAllComparisons();

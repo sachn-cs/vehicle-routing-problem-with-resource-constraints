@@ -1,4 +1,4 @@
-import { VRP_RPD_Solver, Node, Customer, Vehicle, Problem } from '../src/index.js';
+import { VrpRpdSolver, Node, Customer, Vehicle, Problem } from '../src/index.js';
 
 const canvas = document.getElementById('mapCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -138,7 +138,7 @@ solveBtn.onclick = async (): Promise<void> => {
   solveBtn.disabled = true;
 
   const startTime = performance.now();
-  const solver = new VRP_RPD_Solver(currentProblem);
+  const solver = new VrpRpdSolver(currentProblem);
   const parallel = parallelModeCheckbox.checked;
 
   const solution = await solver.solve({

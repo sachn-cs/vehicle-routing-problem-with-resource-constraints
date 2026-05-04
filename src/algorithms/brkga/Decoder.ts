@@ -20,12 +20,11 @@ export interface Chromosome {
 }
 
 /**
- * Multi-pass decoder for BRKGA.
- * Implements the paper's multi-pass schedule construction.
+ * Single-pass decoder for BRKGA.
  *
- * Pass 1: Schedule independent operations (no unsatisfied dependencies)
- * Pass 2+: Schedule operations whose dependencies are now satisfied
- * Repeat until all operations scheduled or no progress
+ * Currently assigns all customers in priority order without dependency checks.
+ * The multi-pass schedule construction from the paper (scheduling delivery first,
+ * then pickup after processing time) is not yet implemented.
  */
 export class Decoder {
   constructor(private readonly problem: Problem) {}
@@ -142,22 +141,18 @@ export class Decoder {
         const nodeId = route.nodes[pos];
         if (!nodeId) continue;
 
-        // Find which customer this node belongs to
-        for (let cIdx = 0; cIdx < this.problem.customers.length; cIdx++) {
-          const customer = this.problem.customers[cIdx];
-          if (!customer) continue;
+        // Find which customer this node belongs to via O(1) Map lookup
+        const customerIndex = this.problem.nodeToCustomerIndex.get(nodeId);
+        if (customerIndex !== undefined) {
+          // Priority based on position (earlier = lower value)
+          priorities[customerIndex] = (rIdx * 100 + pos) / (solution.routes.length * 100);
 
-          if (nodeId === customer.deliveryNodeId || nodeId === customer.pickupNodeId) {
-            // Priority based on position (earlier = lower value)
-            priorities[cIdx] = (rIdx * 100 + pos) / (solution.routes.length * 100);
+          // Assignment based on vehicle
+          assignments[customerIndex] = rIdx / solution.routes.length;
 
-            // Assignment based on vehicle
-            assignments[cIdx] = rIdx / solution.routes.length;
-
-            // Dependencies and transfers default to 0.5
-            dependencies[cIdx] = 0.5;
-            transfers[cIdx] = 0.5;
-          }
+          // Dependencies and transfers default to 0.5
+          dependencies[customerIndex] = 0.5;
+          transfers[customerIndex] = 0.5;
         }
       }
     }

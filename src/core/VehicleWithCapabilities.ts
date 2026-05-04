@@ -3,12 +3,25 @@ import { Vehicle } from './Problem.js';
 /**
  * Types of resources a vehicle can handle.
  */
-export type ResourceType = 'standard' | 'refrigerated' | 'hazmat' | 'fragile' | string;
+export type ResourceType = 'standard' | 'refrigerated' | 'hazmat' | 'fragile';
 
 /**
  * Extended vehicle with transfer capabilities and resource types.
  */
 export class VehicleWithCapabilities extends Vehicle {
+  /**
+   * @param id - Unique vehicle identifier
+   * @param capacity - Maximum load the vehicle can carry
+   * @param supportedResourceTypes - Resource types this vehicle can transport
+   * @param canReceiveFromVehicle - Whether this vehicle can receive transfers
+   * @param canGiveToVehicle - Whether this vehicle can give transfers
+   * @param maxTransferAmount - Maximum amount transferable in one operation
+   * @param transferSpeedMultiplier - Speed factor for transfer operations
+   * @param startDepotId - Depot where the route begins
+   * @param endDepotId - Depot where the route ends
+   * @param costPerKm - Cost per unit distance
+   * @param co2PerKm - CO2 emissions per unit distance
+   */
   constructor(
     id: number,
     capacity: number,
@@ -26,14 +39,16 @@ export class VehicleWithCapabilities extends Vehicle {
   }
 
   /**
-   * Checks if this vehicle can handle a specific resource type.
+   * @param type - Resource type to check
+   * @returns True if this vehicle can transport the given resource type
    */
   canHandleResource(type: ResourceType): boolean {
     return this.supportedResourceTypes.includes(type);
   }
 
   /**
-   * Checks if this vehicle can transfer with another vehicle.
+   * @param other - Vehicle to check compatibility with
+   * @returns True if this vehicle can transfer resources to the other vehicle
    */
   canTransferWith(other: VehicleWithCapabilities): boolean {
     // Check if both vehicles support at least one common resource type
@@ -42,8 +57,7 @@ export class VehicleWithCapabilities extends Vehicle {
     );
     if (commonTypes.length === 0) return false;
 
-    // Check transfer capabilities
-    if (!this.canReceiveFromVehicle || !other.canGiveToVehicle) return false;
+    // Directed transfer: this vehicle gives, other vehicle receives
     if (!this.canGiveToVehicle || !other.canReceiveFromVehicle) return false;
 
     return true;
@@ -77,9 +91,6 @@ export class VehicleFleetManager {
     }
   }
 
-  /**
-   * Adds a vehicle to the fleet.
-   */
   addVehicle(vehicle: VehicleWithCapabilities): void {
     this.vehicles.set(vehicle.id, vehicle);
     this.states.set(vehicle.id, {
@@ -94,22 +105,21 @@ export class VehicleFleetManager {
     });
   }
 
-  /**
-   * Gets a vehicle by ID.
-   */
   getVehicle(vehicleId: number): VehicleWithCapabilities | undefined {
     return this.vehicles.get(vehicleId);
   }
 
-  /**
-   * Gets the current state of a vehicle.
-   */
   getVehicleState(vehicleId: number): VehicleState | undefined {
     return this.states.get(vehicleId);
   }
 
   /**
-   * Updates vehicle state after visiting a node.
+   * @param vehicleId - Vehicle to update
+   * @param nodeId - Node the vehicle just visited
+   * @param nodeType - Type of node visited
+   * @param arrivalTime - Time of arrival at the node
+   * @param loadChange - Change in load (+ for pickup, - for delivery)
+   * @param resourceType - Type of resource being loaded or unloaded
    */
   updateVehicleState(
     vehicleId: number,
@@ -145,7 +155,9 @@ export class VehicleFleetManager {
   }
 
   /**
-   * Sets vehicle waiting state.
+   * @param vehicleId - Vehicle to update
+   * @param isWaiting - Whether the vehicle is currently waiting
+   * @param reason - Reason for waiting
    */
   setVehicleWaiting(
     vehicleId: number,
@@ -161,14 +173,17 @@ export class VehicleFleetManager {
   }
 
   /**
-   * Gets all vehicles that can handle a specific resource type.
+   * @param type - Resource type to filter by
+   * @returns Vehicles capable of transporting the given resource type
    */
   getVehiclesForResourceType(type: ResourceType): VehicleWithCapabilities[] {
     return Array.from(this.vehicles.values()).filter(v => v.canHandleResource(type));
   }
 
   /**
-   * Gets available vehicles at a hub (not currently in transfer).
+   * @param hubId - Hub node ID to check
+   * @param time - Current time
+   * @returns Vehicles present at the hub that are not busy
    */
   getAvailableVehiclesAtHub(hubId: number, time: number): VehicleWithCapabilities[] {
     const available: VehicleWithCapabilities[] = [];
@@ -186,7 +201,8 @@ export class VehicleFleetManager {
   }
 
   /**
-   * Gets the total fleet capacity for a resource type.
+   * @param type - Optional resource type to filter by
+   * @returns Sum of capacities across all (matching) vehicles
    */
   getTotalCapacity(type?: ResourceType): number {
     let total = 0;
@@ -198,7 +214,7 @@ export class VehicleFleetManager {
   }
 
   /**
-   * Gets utilization statistics for the fleet.
+   * @returns Per-vehicle utilization statistics
    */
   getFleetUtilization(): Array<{
     vehicleId: number;
@@ -231,9 +247,6 @@ export class VehicleFleetManager {
     return stats;
   }
 
-  /**
-   * Resets all vehicle states.
-   */
   resetAllStates(): void {
     for (const [id] of this.vehicles.entries()) {
       this.states.set(id, {
@@ -247,5 +260,9 @@ export class VehicleFleetManager {
         waitReason: 'none',
       });
     }
+  }
+
+  getAllVehicles(): readonly VehicleWithCapabilities[] {
+    return Array.from(this.vehicles.values());
   }
 }
