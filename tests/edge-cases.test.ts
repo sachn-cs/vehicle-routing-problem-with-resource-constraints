@@ -1,7 +1,8 @@
+import { expect } from 'chai';
+
 import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
 import { VrpSolution, Route } from '../src/core/Solution.js';
 import { ValidationError } from '../src/errors.js';
-import { expect } from 'chai';
 
 describe('Edge Cases', () => {
   it('rejects empty nodes', () => {
@@ -86,10 +87,10 @@ describe('Edge Cases', () => {
     solution.calculateSchedule();
 
     const cloned = solution.clone();
-    cloned.routes[0].addNode(999);
+    cloned.routes[0]!.addNode(999);
 
-    expect(solution.routes[0].hasNode(999)).to.be.false;
-    expect(cloned.routes[0].hasNode(999)).to.be.true;
+    expect(solution.routes[0]!.hasNode(999)).to.be.false;
+    expect(cloned.routes[0]!.hasNode(999)).to.be.true;
   });
 
   it('calculateSchedule is idempotent', () => {

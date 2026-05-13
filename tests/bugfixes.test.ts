@@ -1,3 +1,5 @@
+import { expect } from 'chai';
+
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
 import { TransferAwareInsertionOperators } from '../src/algorithms/alns/TransferAwareOperators.js';
@@ -13,7 +15,6 @@ import {
 import { TrafficAwareProblem, TrafficModel } from '../src/core/TrafficAwareProblem.js';
 import { VehicleWithCapabilities } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
-import { expect } from 'chai';
 
 // ============================================================
 // C1: totalCost / totalCO2 must be per-route, per-vehicle
@@ -99,9 +100,9 @@ describe('C2 - Delivery time window enforcement', () => {
     // With earliestDeliveryTime = 100, it must be >= 100.
     expect(solution.nodeTimes[1]).to.be.at.least(100);
     // Resource ready time must account for the wait
-    expect(solution.resourceReadyTimes[1]).to.equal(solution.nodeTimes[1] + 50);
+    expect(solution.resourceReadyTimes[1]).to.equal(solution.nodeTimes[1]! + 50);
     // Pickup must be after resource is ready
-    expect(solution.nodeTimes[2]).to.be.at.least(solution.resourceReadyTimes[1]);
+    expect(solution.nodeTimes[2]).to.be.at.least(solution.resourceReadyTimes[1]!);
   });
 
   it('latestDeliveryTime violation makes solution infeasible', () => {
@@ -551,8 +552,8 @@ describe('Regret insertion infinite-loop guard', () => {
 
     expect(elapsed).to.be.lessThan(2000);
     expect(solution.isComplete()).to.be.true;
-    expect(solution.routes[0].nodes).to.include(1);
-    expect(solution.routes[0].nodes).to.include(2);
+    expect(solution.routes[0]!.nodes).to.include(1);
+    expect(solution.routes[0]!.nodes).to.include(2);
   });
 
   it('regret3Insertion completes with a single route', () => {

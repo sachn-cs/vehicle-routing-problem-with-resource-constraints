@@ -1,6 +1,7 @@
+import { expect } from 'chai';
+
 import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
 import { VrpRpdSolver } from '../src/index.js';
-import { expect } from 'chai';
 
 describe('Benchmarks', () => {
   function generateGridProblem(size: number): VrpProblem {

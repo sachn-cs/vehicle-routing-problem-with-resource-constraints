@@ -1,3 +1,5 @@
+import { expect } from 'chai';
+
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
@@ -8,7 +10,6 @@ import { VrpSolution, Route } from '../src/core/Solution.js';
 import { ProblemWithTransfers } from '../src/core/SolutionWithTransfers.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
-import { expect } from 'chai';
 
 // ============================================================
 // T1: ResourceType is a closed union
@@ -140,7 +141,7 @@ describe('T4 - ProblemWithTransfers constructor accepts Node records', () => {
     const hubs = [new TransferHub(5, 10, 10, 'Hub', 2, 1)];
 
     const problem = new ProblemWithTransfers(nodes, customers, vehicles, 0, hubs);
-    expect(problem.nodes[0].name).to.equal('Depot');
+    expect(problem.nodes[0]!.name).to.equal('Depot');
     expect(problem.isTransferHub(5)).to.be.true;
     expect(problem.isTransferHub(1)).to.be.false;
   });

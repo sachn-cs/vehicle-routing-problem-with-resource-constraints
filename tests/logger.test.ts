@@ -1,7 +1,8 @@
+import { expect } from 'chai';
+
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
 import type { Logger } from '../src/logger.js';
-import { expect } from 'chai';
 
 describe('Logger Injection', () => {
   it('ALNS accepts custom logger without throwing', () => {

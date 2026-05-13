@@ -44,4 +44,10 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-expressions': 'off',
+    },
+  },
 );

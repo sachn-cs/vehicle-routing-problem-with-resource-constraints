@@ -1,5 +1,6 @@
-import { VrpError, ValidationError, InfeasibleSolutionError, AlgorithmConvergenceError } from '../src/errors.js';
 import { expect } from 'chai';
+
+import { VrpError, ValidationError, InfeasibleSolutionError, AlgorithmConvergenceError } from '../src/errors.js';
 
 describe('Typed Errors', () => {
   it('VrpError is an Error', () => {
