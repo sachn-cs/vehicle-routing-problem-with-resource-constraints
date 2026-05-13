@@ -3,7 +3,7 @@
   "testEnvironment": "node",
   "extensionsToTreatAsEsm": [".ts"],
   "transform": {
-    "^.+\\.tsx?": [
+    "^.+\\.tsx?$": [
       "ts-jest",
       {
         "useESM": true,
