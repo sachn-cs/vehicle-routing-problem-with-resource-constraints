@@ -1,4 +1,5 @@
-import type { Worker } from 'worker_threads';
+import { resolve } from 'path';
+import { Worker } from 'worker_threads';
 
 import type { VrpProblem } from '../../core/Problem.js';
 import type { VrpSolution } from '../../core/Solution.js';
@@ -7,6 +8,7 @@ import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
 
 import { Decoder, type Chromosome } from './Decoder.js';
+import { sendCommand } from './IslandMessenger.js';
 
 export interface BRKGAProgress {
   generation: number;
@@ -326,13 +328,9 @@ export class BRKGA {
   }
 
   protected async solveIslands(startTime: number): Promise<VrpSolution> {
-    const { Worker } = await import('worker_threads');
-    const pathModule = await import('path');
-    const { sendCommand } = await import('./IslandMessenger.js');
-
     const islandPopulationSize = Math.max(10, Math.floor(this.populationSize / this.islands));
     const islandMaxGenerations = this.maxGenerations;
-    const workerPath = pathModule.resolve(process.cwd(), 'dist', 'worker.js');
+    const workerPath = resolve(process.cwd(), 'dist', 'worker.js');
 
     const workers: Worker[] = [];
 
