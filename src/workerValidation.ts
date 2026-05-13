@@ -8,8 +8,9 @@ export interface WorkerData {
   }>;
   vehicles: Array<{ id: number; capacity: number }>;
   depotNodeId: number;
-  type: 'ALNS' | 'BRKGA';
-  options: Record<string, number>;
+  type: 'ALNS' | 'BRKGA' | 'island-brkga';
+  options: Record<string, unknown>;
+  islandId?: number;
 }
 
 export interface WorkerResult {
@@ -26,7 +27,7 @@ export function isWorkerData(value: unknown): value is WorkerData {
     Array.isArray(v['customers']) &&
     Array.isArray(v['vehicles']) &&
     typeof v['depotNodeId'] === 'number' &&
-    (v['type'] === 'ALNS' || v['type'] === 'BRKGA') &&
+    (v['type'] === 'ALNS' || v['type'] === 'BRKGA' || v['type'] === 'island-brkga') &&
     typeof v['options'] === 'object' &&
     v['options'] !== null
   );
@@ -63,6 +64,24 @@ export function validateWorkerData(data: WorkerData): string | null {
   }
 
   if (!data.nodes[data.depotNodeId]) return `depotNodeId ${data.depotNodeId} not found in nodes`;
+
+  if (data.type === 'island-brkga') {
+    if (typeof data.islandId !== 'number' || data.islandId < 0 || !Number.isInteger(data.islandId)) {
+      return 'islandId must be a non-negative integer';
+    }
+    const islandPopulationSize = data.options['islandPopulationSize'];
+    if (typeof islandPopulationSize !== 'number' || islandPopulationSize < 1 || !Number.isInteger(islandPopulationSize)) {
+      return 'islandPopulationSize must be a positive integer';
+    }
+    const islandMaxGenerations = data.options['islandMaxGenerations'];
+    if (typeof islandMaxGenerations !== 'number' || islandMaxGenerations < 1 || !Number.isInteger(islandMaxGenerations)) {
+      return 'islandMaxGenerations must be a positive integer';
+    }
+    const migrationInterval = data.options['migrationInterval'];
+    if (typeof migrationInterval !== 'number' || migrationInterval < 1 || !Number.isInteger(migrationInterval)) {
+      return 'migrationInterval must be a positive integer';
+    }
+  }
 
   return null;
 }

@@ -2,6 +2,7 @@ import { workerData, parentPort } from 'worker_threads';
 
 import { ALNS } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
+import type { Chromosome } from './algorithms/brkga/Decoder.js';
 import { VrpProblem, LocationNode, Customer, Vehicle } from './core/Problem.js';
 import type { VrpSolution } from './core/Solution.js';
 import { isWorkerData, validateWorkerData } from './workerValidation.js';
@@ -48,6 +49,71 @@ const problem = new VrpProblem(nodes, customers, vehicles, data.depotNodeId);
 void (async () => {
   try {
     let solution: VrpSolution;
+
+    if (data.type === 'island-brkga') {
+      const { BRKGA } = await import('./algorithms/brkga/BRKGA.js');
+      const brkga = new BRKGA(problem, data.options);
+      const islandMaxGenerations = (data.options['islandMaxGenerations'] as number | undefined) ?? 100;
+      const migrationInterval = (data.options['migrationInterval'] as number | undefined) ?? 50;
+
+      let population = brkga.initializePopulation();
+      let generation = 0;
+
+      const evaluate = () => {
+        for (const ind of population) {
+          if (ind.fitness === null) {
+            const sol = brkga.decoder.decode(ind.chromosome);
+            ind.fitness = sol.isFeasible() ? sol.makespan : Infinity;
+            ind.solution = sol;
+          }
+        }
+        population.sort((a, b) => (a.fitness ?? Infinity) - (b.fitness ?? Infinity));
+      };
+
+      evaluate();
+
+      const messageHandler = (msg: unknown) => {
+        const cmd = msg as { type: string; generations?: number; migrants?: Chromosome[] };
+        if (cmd.type === 'evolve') {
+          const gens = cmd.generations ?? migrationInterval;
+          for (let g = 0; g < gens && generation < islandMaxGenerations; g++, generation++) {
+            population = brkga.evolvePopulation(population);
+            evaluate();
+          }
+          parentPort?.postMessage({
+            type: 'checkpoint',
+            islandId: data.islandId,
+            generation,
+            population,
+          });
+        } else if (cmd.type === 'inject') {
+          const migrants = cmd.migrants ?? [];
+          const replaceCount = Math.min(migrants.length, population.length);
+          for (let i = 0; i < replaceCount; i++) {
+            const targetIdx = population.length - 1 - i;
+            population[targetIdx] = {
+              chromosome: migrants[i] as Chromosome,
+              fitness: null,
+              solution: null,
+            };
+          }
+          parentPort?.postMessage({ type: 'checkpoint', islandId: data.islandId, generation, population });
+        } else if (cmd.type === 'finish') {
+          evaluate();
+          const best = population[0];
+          parentPort?.postMessage({
+            type: 'finish',
+            islandId: data.islandId,
+            bestIndividual: best ?? null,
+          });
+          parentPort?.off('message', messageHandler);
+        }
+      };
+
+      parentPort?.on('message', messageHandler);
+      parentPort?.postMessage({ type: 'checkpoint', islandId: data.islandId, generation, population });
+      return;
+    }
 
     if (data.type === 'ALNS') {
       const alns = new ALNS(problem, data.options);

@@ -13,7 +13,7 @@ export interface IslandCheckpointMessage {
 export interface IslandFinishMessage {
   type: 'finish';
   islandId: number;
-  bestIndividual: Individual;
+  bestIndividual: Individual | null;
 }
 
 export type IslandWorkerMessage = IslandCheckpointMessage | IslandFinishMessage;

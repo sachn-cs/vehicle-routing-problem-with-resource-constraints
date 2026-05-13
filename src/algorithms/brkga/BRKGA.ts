@@ -1,3 +1,5 @@
+import type { Worker } from 'worker_threads';
+
 import type { VrpProblem } from '../../core/Problem.js';
 import type { VrpSolution } from '../../core/Solution.js';
 import { ValidationError } from '../../errors.js';
@@ -58,7 +60,7 @@ export class BRKGA {
   protected readonly mutantFraction: number;
   protected readonly crossoverProb: number;
   protected readonly maxGenerations: number;
-  protected readonly decoder: Decoder;
+  public readonly decoder: Decoder;
   protected readonly chromosomeSize: number;
 
   // Warm-start configuration
@@ -136,82 +138,10 @@ export class BRKGA {
     if (this.islands > 1) {
       return this.solveIslands(startTime);
     }
-    let population = this.initializePopulation();
-    let bestIndividual: Individual | null = null;
-    let generationsWithoutImprovement = 0;
-    const maxStagnantGenerations = Math.floor(this.maxGenerations * 0.1); // 10% stagnation limit
-
-    for (let g = 0; g < this.maxGenerations; g++) {
-      // Timeout check
-      if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
-        this.logger.log(`BRKGA stopped early after ${g} generations (timeout)`);
-        break;
-      }
-
-      // Evaluate
-      for (const ind of population) {
-        if (ind.fitness === null) {
-          const solution = this.decoder.decode(ind.chromosome);
-          ind.fitness = solution.isFeasible() ? solution.makespan : Infinity;
-          ind.solution = solution;
-        }
-      }
-
-      // Sort by fitness (lower is better)
-      population.sort((a, b) => (a.fitness ?? Infinity) - (b.fitness ?? Infinity));
-
-      // Update best
-      const top = population[0];
-      const topFitness = top?.fitness ?? Infinity;
-      if (
-        !bestIndividual ||
-        (bestIndividual.fitness !== null && topFitness < bestIndividual.fitness)
-      ) {
-        if (!top) continue;
-        bestIndividual = {
-          chromosome: {
-            priorities: [...top.chromosome.priorities],
-            assignments: [...top.chromosome.assignments],
-            dependencies: [...top.chromosome.dependencies],
-            transfers: [...top.chromosome.transfers],
-          },
-          fitness: top.fitness,
-          solution: top.solution?.clone() ?? null,
-        };
-        generationsWithoutImprovement = 0;
-      } else {
-        generationsWithoutImprovement++;
-      }
-
-      // Early termination if stagnant
-      if (generationsWithoutImprovement >= maxStagnantGenerations) {
-        break;
-      }
-
-      population = this.evolvePopulation(population);
-
-      // Progress callback every 100 generations
-      if (this.onProgress && g % 100 === 0) {
-        this.onProgress({
-          generation: g,
-          maxGenerations: this.maxGenerations,
-          bestMakespan: bestIndividual.fitness ?? Infinity,
-          populationSize: this.populationSize,
-        });
-      }
-
-      // Progress logging for long runs (every 10 generations)
-      if (g % 10 === 0) {
-        this.logger.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
-      }
-    }
-
-    return (
-      bestIndividual?.solution ?? this.decoder.decode(this.randomIndividual().chromosome)
-    );
+    return this.runSingleIsland(startTime);
   }
 
-  protected initializePopulation(): Individual[] {
+  initializePopulation(): Individual[] {
     const population: Individual[] = [];
 
     // Warm-start: seed population with ALNS solution
@@ -324,13 +254,237 @@ export class BRKGA {
     return nextPopulation;
   }
 
-  /**
-   * Solves using multiple island populations in parallel.
-   * Stub: full implementation deferred to later tasks.
-   */
-  protected solveIslands(_startTime: number): Promise<VrpSolution> {
-    this.logger.log(`Island-model BRKGA not yet implemented (requested ${this.islands} islands)`);
-    return Promise.resolve(this.decoder.decode(this.randomIndividual().chromosome));
+  protected runSingleIsland(startTime: number): VrpSolution {
+    let population = this.initializePopulation();
+    let bestIndividual: Individual | null = null;
+    let generationsWithoutImprovement = 0;
+    const maxStagnantGenerations = Math.floor(this.maxGenerations * 0.1);
+
+    for (let g = 0; g < this.maxGenerations; g++) {
+      if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
+        this.logger.log(`BRKGA stopped early after ${g} generations (timeout)`);
+        break;
+      }
+
+      for (const ind of population) {
+        if (ind.fitness === null) {
+          const solution = this.decoder.decode(ind.chromosome);
+          ind.fitness = solution.isFeasible() ? solution.makespan : Infinity;
+          ind.solution = solution;
+        }
+      }
+
+      population.sort((a, b) => (a.fitness ?? Infinity) - (b.fitness ?? Infinity));
+
+      const top = population[0];
+      const topFitness = top?.fitness ?? Infinity;
+      if (
+        !bestIndividual ||
+        (bestIndividual.fitness !== null && topFitness < bestIndividual.fitness)
+      ) {
+        if (!top) continue;
+        bestIndividual = {
+          chromosome: {
+            priorities: [...top.chromosome.priorities],
+            assignments: [...top.chromosome.assignments],
+            dependencies: [...top.chromosome.dependencies],
+            transfers: [...top.chromosome.transfers],
+          },
+          fitness: top.fitness,
+          solution: top.solution?.clone() ?? null,
+        };
+        generationsWithoutImprovement = 0;
+      } else {
+        generationsWithoutImprovement++;
+      }
+
+      if (generationsWithoutImprovement >= maxStagnantGenerations) {
+        break;
+      }
+
+      population = this.evolvePopulation(population);
+
+      if (this.onProgress && g % 100 === 0) {
+        this.onProgress({
+          generation: g,
+          maxGenerations: this.maxGenerations,
+          bestMakespan: bestIndividual.fitness ?? Infinity,
+          populationSize: this.populationSize,
+        });
+      }
+
+      if (g % 10 === 0) {
+        this.logger.log(
+          `BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`,
+        );
+      }
+    }
+
+    return (
+      bestIndividual?.solution ?? this.decoder.decode(this.randomIndividual().chromosome)
+    );
+  }
+
+  protected async solveIslands(startTime: number): Promise<VrpSolution> {
+    const { Worker } = await import('worker_threads');
+    const pathModule = await import('path');
+    const { sendCommand } = await import('./IslandMessenger.js');
+
+    const islandPopulationSize = Math.max(10, Math.floor(this.populationSize / this.islands));
+    const islandMaxGenerations = this.maxGenerations;
+    const workerPath = pathModule.resolve(process.cwd(), 'dist', 'worker.js');
+
+    const workers: Worker[] = [];
+
+    for (let i = 0; i < this.islands; i++) {
+      const worker = new Worker(workerPath, {
+        workerData: {
+          nodes: this.problem.nodes,
+          customers: this.problem.customers,
+          vehicles: this.problem.vehicles,
+          depotNodeId: this.problem.depotNodeId,
+          type: 'island-brkga',
+          islandId: i,
+          options: {
+            populationSize: islandPopulationSize,
+            eliteFraction: this.eliteFraction,
+            mutantFraction: this.mutantFraction,
+            crossoverProb: this.crossoverProb,
+            maxGenerations: islandMaxGenerations,
+            islandPopulationSize,
+            islandMaxGenerations,
+            migrationInterval: this.migrationInterval,
+            warmStartSolution: this.warmStartSolution,
+            warmStartProportion: this.warmStartProportion,
+            maxTimeMs: this.maxTimeMs,
+          },
+        },
+      });
+      workers.push(worker);
+    }
+
+    let globalBest: Individual | null = null;
+    let generation = 0;
+
+    try {
+      await Promise.all(
+        workers.map(w => sendCommand(w, { type: 'evolve', generations: 0 })),
+      );
+
+      while (generation < this.maxGenerations) {
+        if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
+          this.logger.log('Island BRKGA stopping early (global timeout)');
+          break;
+        }
+
+        const evolveResults = await Promise.all(
+          workers.map(w =>
+            sendCommand(w, { type: 'evolve', generations: this.migrationInterval }),
+          ),
+        );
+
+        const populations: Individual[][] = [];
+        for (const result of evolveResults) {
+          if (result.type === 'checkpoint') {
+            populations.push(result.population);
+            const islandBest = result.population[0] ?? null;
+            if (
+              islandBest &&
+              (globalBest === null ||
+                (islandBest.fitness !== null && islandBest.fitness < (globalBest.fitness ?? Infinity)))
+            ) {
+              globalBest = {
+                chromosome: {
+                  priorities: [...islandBest.chromosome.priorities],
+                  assignments: [...islandBest.chromosome.assignments],
+                  dependencies: [...islandBest.chromosome.dependencies],
+                  transfers: [...islandBest.chromosome.transfers],
+                },
+                fitness: islandBest.fitness,
+                solution: islandBest.solution?.clone() ?? null,
+              };
+            }
+          }
+        }
+
+        generation += this.migrationInterval;
+
+        if (this.onProgress && generation % 100 === 0) {
+          this.onProgress({
+            generation,
+            maxGenerations: this.maxGenerations,
+            bestMakespan: globalBest?.fitness ?? Infinity,
+            populationSize: this.populationSize,
+          });
+        }
+
+        if (generation >= this.maxGenerations) break;
+
+        const migrantCount = Math.max(1, Math.floor(islandPopulationSize * this.migrantFraction));
+        const allMigrants: Chromosome[] = [];
+        for (const pop of populations) {
+          for (let i = 0; i < migrantCount; i++) {
+            const donor = pop[i];
+            if (donor) {
+              allMigrants.push({
+                priorities: [...donor.chromosome.priorities],
+                assignments: [...donor.chromosome.assignments],
+                dependencies: [...donor.chromosome.dependencies],
+                transfers: [...donor.chromosome.transfers],
+              });
+            }
+          }
+        }
+
+        for (let i = allMigrants.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const temp = allMigrants[i];
+          allMigrants[i] = allMigrants[j] as Chromosome;
+          allMigrants[j] = temp as Chromosome;
+        }
+
+        const migrantsPerIsland = Math.max(1, Math.floor(allMigrants.length / this.islands));
+        const injectPromises: Promise<unknown>[] = [];
+        for (let i = 0; i < this.islands; i++) {
+          const startIdx = i * migrantsPerIsland;
+          const slice = allMigrants.slice(startIdx, startIdx + migrantsPerIsland);
+          injectPromises.push(sendCommand(workers[i] as Worker, { type: 'inject', migrants: slice }));
+        }
+        await Promise.all(injectPromises);
+      }
+
+      const finishResults = await Promise.all(
+        workers.map(w => sendCommand(w, { type: 'finish' })),
+      );
+
+      for (const result of finishResults) {
+        if (result.type === 'finish' && result.bestIndividual) {
+          const ind = result.bestIndividual;
+          if (
+            globalBest === null ||
+            (ind.fitness !== null && ind.fitness < (globalBest.fitness ?? Infinity))
+          ) {
+            globalBest = ind;
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.log(
+        `Island BRKGA worker failed: ${err instanceof Error ? err.message : String(err)}. Falling back to single-island.`,
+      );
+      for (const w of workers) {
+        w.terminate().catch(() => {});
+      }
+      return this.runSingleIsland(startTime);
+    }
+
+    for (const w of workers) {
+      w.terminate().catch(() => {});
+    }
+
+    return (
+      globalBest?.solution ?? this.decoder.decode(this.randomIndividual().chromosome)
+    );
   }
 
   /**
