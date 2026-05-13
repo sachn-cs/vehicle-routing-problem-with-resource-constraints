@@ -33,6 +33,10 @@
   "keywords": ["vrp", "routing", "optimization", "logistics"],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vrp-rpd.git"
+  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.0",
     "@types/jest": "^30.0.0",
@@ -42,7 +46,7 @@
     "c8": "^10.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-import": "^2.30.0",
-    "jest": "^30.3.0",
+    "jest": "^29.7.0",
     "rollup": "^4.0.0",
     "rollup-plugin-dts": "^6.0.0",
     "ts-jest": "^29.4.0",
