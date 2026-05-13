@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CLI** - Command-line solver with JSON input/output (`vrp-solver`)
+- **Solution serialization** - `serialize()` and `deserialize()` on `VrpSolution`
+- **Solver capabilities** - `maxTimeMs`, `targetMakespan`, progress callbacks
+- **Benchmark tests** - Performance and scalability validation
 - TypeScript conversion with strict mode enabled
 - Multi-objective optimization support (Pareto fronts)
 - Time Windows (VRPTW) support via `CustomerWithTimeWindows` class
@@ -21,22 +25,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transfer-aware ALNS operators
 
 ### Changed
+- BRKGA decoder rewritten as multi-pass (delivery-first, then pickup after processing time)
+- BRKGA chromosome expanded to 4n structure (π, σ, α, β)
+- ALNS wired with all 6 destroy + 4 repair operators from paper
+- Warm-start enabled by default (15% of BRKGA population seeded from ALNS)
+- Per-vehicle depot support in `calculateSchedule()`
+- `getTravelTime()` virtual method for `TrafficAwareProblem` override
 - Converted entire codebase from JavaScript to TypeScript
-- Updated ALNS default parameters
+- Updated ALNS default parameters to paper specs
 - Enhanced `Solution` class with multi-objective tracking
 
 ### Deprecated
+- `Problem` alias (use `VrpProblem`)
+- `Node` alias (use `LocationNode`)
+- `Solution` alias (use `VrpSolution`)
 - JavaScript source files (`.js` → `.ts`)
 
 ### Fixed
+- BRKGA timeout and progress callback support
 - Type safety issues with indexed access
 - Undefined handling in operator functions
+- ESLint 9 flat config with zero warnings
+- All `any` types removed from source and tests
+- Template expression type safety
 
 ### Removed
 - Old JavaScript test files
+- 7 suppressed ESLint rules (now fully enabled)
 
 ### Security
 - Added strict TypeScript configuration for type safety
+- Input validation on all problem constructors
 
 ---
 
@@ -52,11 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive demo application
 
 ### Known Issues
-- ALNS parameters differ from paper specifications
-- BRKGA chromosome structure simplified (2n vs 4n)
 - No GPU acceleration
-- No warm-start from ALNS to BRKGA
-- Decoder does not implement multi-pass logic from paper
+- No island-model BRKGA parallelization
 
 ---
 

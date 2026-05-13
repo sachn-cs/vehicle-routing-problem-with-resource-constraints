@@ -6,6 +6,13 @@ import { defaultLogger } from '../../logger.js';
 
 import { Decoder, type Chromosome } from './Decoder.js';
 
+export interface BRKGAProgress {
+  generation: number;
+  maxGenerations: number;
+  bestMakespan: number;
+  populationSize: number;
+}
+
 export interface BRKGAOptions {
   populationSize?: number;
   eliteFraction?: number;
@@ -15,6 +22,10 @@ export interface BRKGAOptions {
   warmStartSolution?: VrpSolution | undefined;
   warmStartProportion?: number;
   logger?: Logger;
+  /** Maximum time in milliseconds before aborting */
+  maxTimeMs?: number;
+  /** Called every 100 generations with progress */
+  onProgress?: (progress: BRKGAProgress) => void;
 }
 
 export interface Individual {
@@ -48,6 +59,8 @@ export class BRKGA {
   protected readonly warmStartSolution: VrpSolution | null;
   protected readonly warmStartProportion: number;
   protected readonly logger: Logger;
+  protected readonly maxTimeMs: number;
+  protected readonly onProgress: ((progress: BRKGAProgress) => void) | null;
 
   /**
    * @param problem - VRP-RPD problem instance to solve
@@ -87,6 +100,8 @@ export class BRKGA {
     this.warmStartSolution = options.warmStartSolution ?? null;
     this.warmStartProportion = options.warmStartProportion ?? 0.15; // Paper spec
     this.logger = options.logger ?? defaultLogger;
+    this.maxTimeMs = options.maxTimeMs ?? 0;
+    this.onProgress = options.onProgress ?? null;
 
     this.decoder = new Decoder(problem);
     this.chromosomeSize = problem.customers.length; // n genes per component; 4 components = 4n total
@@ -96,12 +111,19 @@ export class BRKGA {
    * @returns Best solution found after convergence or max generations
    */
   solve(): VrpSolution {
+    const startTime = Date.now();
     let population = this.initializePopulation();
     let bestIndividual: Individual | null = null;
     let generationsWithoutImprovement = 0;
     const maxStagnantGenerations = Math.floor(this.maxGenerations * 0.1); // 10% stagnation limit
 
     for (let g = 0; g < this.maxGenerations; g++) {
+      // Timeout check
+      if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
+        this.logger.log(`BRKGA stopped early after ${g} generations (timeout)`);
+        break;
+      }
+
       // Evaluate
       for (const ind of population) {
         if (ind.fitness === null) {
@@ -175,7 +197,17 @@ export class BRKGA {
 
       population = nextPopulation;
 
-      // Progress logging for long runs (every 1000 generations)
+      // Progress callback every 100 generations
+      if (this.onProgress && g % 100 === 0) {
+        this.onProgress({
+          generation: g,
+          maxGenerations: this.maxGenerations,
+          bestMakespan: bestIndividual.fitness ?? Infinity,
+          populationSize: this.populationSize,
+        });
+      }
+
+      // Progress logging for long runs (every 10 generations)
       if (g % 10 === 0) {
         this.logger.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
       }

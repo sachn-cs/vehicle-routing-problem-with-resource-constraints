@@ -6,6 +6,14 @@ import { defaultLogger } from '../../logger.js';
 
 import { RemovalOperators, InsertionOperators } from './operators.js';
 
+export interface ALNSProgress {
+  iteration: number;
+  maxIterations: number;
+  bestMakespan: number;
+  currentMakespan: number;
+  temperature: number;
+}
+
 export interface ALNSOptions {
   maxIterations?: number;
   initialTemp?: number;
@@ -16,6 +24,10 @@ export interface ALNSOptions {
   scoreBetter?: number;
   scoreAccepted?: number;
   logger?: Logger;
+  /** Maximum time in milliseconds before aborting */
+  maxTimeMs?: number;
+  /** Called every 10 iterations with progress */
+  onProgress?: (progress: ALNSProgress) => void;
 }
 
 /**
@@ -48,6 +60,8 @@ export class ALNS {
   protected usage: { removal: number[]; insertion: number[] };
   protected readonly lambda: number;
   protected readonly logger: Logger;
+  protected readonly maxTimeMs: number;
+  protected readonly onProgress: ((progress: ALNSProgress) => void) | null;
 
   protected temp: number;
 
@@ -101,6 +115,8 @@ export class ALNS {
     };
     this.lambda = 0.1;
     this.logger = options.logger ?? defaultLogger;
+    this.maxTimeMs = options.maxTimeMs ?? 0;
+    this.onProgress = options.onProgress ?? null;
 
     this.temp = this.initialTemp;
   }
@@ -118,12 +134,19 @@ export class ALNS {
    * @returns Best solution found after maxIterations
    */
   solve(): VrpSolution {
+    const startTime = Date.now();
     let currentSolution = this.generateInitialSolution();
     let bestSolution = currentSolution.clone();
     let currentCost = currentSolution.calculateSchedule();
     let bestCost = currentCost;
 
     for (let i = 0; i < this.maxIterations; i++) {
+      // Timeout check
+      if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
+        this.logger.log(`ALNS stopped early after ${i} iterations (timeout)`);
+        break;
+      }
+
       const rIdx = this.selectOperator(this.removalWeights);
       const iIdx = this.selectOperator(this.insertionWeights);
 
@@ -170,6 +193,17 @@ export class ALNS {
 
       // Paper cooling rate: 0.9998 (very slow cooling)
       this.temp *= this.coolingRate;
+
+      // Progress callback every 10 iterations
+      if (this.onProgress && i % 10 === 0) {
+        this.onProgress({
+          iteration: i,
+          maxIterations: this.maxIterations,
+          bestMakespan: bestCost,
+          currentMakespan: currentCost,
+          temperature: this.temp,
+        });
+      }
     }
 
     return bestSolution;

@@ -94,11 +94,15 @@ export class VrpSolution {
       for (let vIdx = 0; vIdx < this.routes.length; vIdx++) {
         const route = this.routes[vIdx];
         if (!route) continue;
+        const vehicle = this.problem.vehicleMap.get(route.vehicleId);
+        const startDepot = vehicle?.startDepotId ?? this.problem.depotNodeId;
+        const endDepot = vehicle?.endDepotId ?? this.problem.depotNodeId;
+
         let currentTime = 0;
-        let prevNode = this.problem.depotNodeId;
+        let prevNode = startDepot;
 
         for (const nodeId of route.nodes) {
-          const travelTime = this.problem.getDistance(prevNode, nodeId);
+          const travelTime = this.problem.getTravelTime(prevNode, nodeId);
           let arrivalTime = currentTime + travelTime;
 
           // Check if this node is a pickup
@@ -142,7 +146,7 @@ export class VrpSolution {
 
         // Return to depot
         const returnTime =
-          currentTime + this.problem.getDistance(prevNode, this.problem.depotNodeId);
+          currentTime + this.problem.getTravelTime(prevNode, endDepot);
         const routeKey = `depot_return_${vIdx}`;
         if (nodeTimes[routeKey] !== returnTime) {
           nodeTimes[routeKey] = returnTime;
@@ -185,13 +189,17 @@ export class VrpSolution {
    * @returns Total distance for the route including return to depot
    */
   calculateRouteDistance(route: Route): number {
+    const vehicle = this.problem.vehicleMap.get(route.vehicleId);
+    const startDepot = vehicle?.startDepotId ?? this.problem.depotNodeId;
+    const endDepot = vehicle?.endDepotId ?? this.problem.depotNodeId;
+
     let distance = 0;
-    let prevNode = this.problem.depotNodeId;
+    let prevNode = startDepot;
     for (const nodeId of route.nodes) {
       distance += this.problem.getDistance(prevNode, nodeId);
       prevNode = nodeId;
     }
-    distance += this.problem.getDistance(prevNode, this.problem.depotNodeId);
+    distance += this.problem.getDistance(prevNode, endDepot);
     return distance;
   }
 
@@ -204,13 +212,17 @@ export class VrpSolution {
     baseResourceReadyTimes: Record<number, number>,
     nodeReadyTimes?: Record<number, number>,
   ): { returnTime: number; updatedReadyTimes: Record<number, number>; nodeArrivalTimes: Record<number, number> } {
+    const vehicle = this.problem.vehicleMap.get(route.vehicleId);
+    const startDepot = vehicle?.startDepotId ?? this.problem.depotNodeId;
+    const endDepot = vehicle?.endDepotId ?? this.problem.depotNodeId;
+
     let currentTime = 0;
-    let prevNode = this.problem.depotNodeId;
+    let prevNode = startDepot;
     const updatedReadyTimes: Record<number, number> = { ...baseResourceReadyTimes };
     const nodeArrivalTimes: Record<number, number> = {};
 
     for (const nodeId of route.nodes) {
-      const travelTime = this.problem.getDistance(prevNode, nodeId);
+      const travelTime = this.problem.getTravelTime(prevNode, nodeId);
       let arrivalTime = currentTime + travelTime;
 
       // Apply node-specific ready time (e.g. hub arrival from another route)
@@ -245,7 +257,7 @@ export class VrpSolution {
       prevNode = nodeId;
     }
 
-    const returnTime = currentTime + this.problem.getDistance(prevNode, this.problem.depotNodeId);
+    const returnTime = currentTime + this.problem.getTravelTime(prevNode, endDepot);
     return { returnTime, updatedReadyTimes, nodeArrivalTimes };
   }
 
@@ -414,6 +426,52 @@ export class VrpSolution {
       totalCO2: this.totalCO2,
     };
   }
+
+  /**
+   * Serializes this solution to a plain JSON-compatible object.
+   * The problem instance is NOT included; pass it to deserialize().
+   */
+  serialize(): SerializedSolution {
+    return {
+      routes: this.routes.map(r => ({ vehicleId: r.vehicleId, nodes: [...r.nodes] })),
+      makespan: this.makespan,
+      totalDistance: this.totalDistance,
+      totalCost: this.totalCost,
+      totalCO2: this.totalCO2,
+      nodeTimes: { ...this.nodeTimes },
+      resourceReadyTimes: { ...this.resourceReadyTimes },
+    };
+  }
+
+  /**
+   * Reconstructs a VrpSolution from a serialized object and a problem instance.
+   */
+  static deserialize(data: SerializedSolution, problem: VrpProblem): VrpSolution {
+    const routes = data.routes.map(r => new Route(r.vehicleId, [...r.nodes]));
+    const solution = new VrpSolution(problem, routes);
+    solution.makespan = data.makespan;
+    solution.totalDistance = data.totalDistance;
+    solution.totalCost = data.totalCost;
+    solution.totalCO2 = data.totalCO2;
+    solution.nodeTimes = { ...data.nodeTimes };
+    solution.resourceReadyTimes = { ...data.resourceReadyTimes };
+    return solution;
+  }
+}
+
+export interface SerializedRoute {
+  vehicleId: number;
+  nodes: number[];
+}
+
+export interface SerializedSolution {
+  routes: SerializedRoute[];
+  makespan: number;
+  totalDistance: number;
+  totalCost: number;
+  totalCO2: number;
+  nodeTimes: Record<number | string, number>;
+  resourceReadyTimes: Record<number, number>;
 }
 
 /** @deprecated Use {@link VrpSolution} instead. */

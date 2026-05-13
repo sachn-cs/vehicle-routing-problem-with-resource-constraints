@@ -1,6 +1,7 @@
 // Core (new names)
 export { VrpProblem, LocationNode, Customer, CustomerWithTimeWindows, Vehicle } from './core/Problem.js';
 export { VrpSolution, Route } from './core/Solution.js';
+export type { SerializedRoute, SerializedSolution } from './core/Solution.js';
 
 // Backward-compatible aliases
 // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -65,9 +66,9 @@ import { resolve } from 'path';
 import { Worker } from 'worker_threads';
 
 import { ALNS } from './algorithms/alns/ALNS.js';
-import type { ALNSOptions } from './algorithms/alns/ALNS.js';
+import type { ALNSOptions, ALNSProgress } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
-import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
+import type { BRKGAOptions, BRKGAProgress } from './algorithms/brkga/BRKGA.js';
 import type { VrpProblem } from './core/Problem.js';
 import { VrpSolution, Route } from './core/Solution.js';
 import { AlgorithmConvergenceError } from './errors.js';
@@ -88,6 +89,20 @@ export interface SolveOptions {
   parallel?: boolean;
   warmStart?: boolean;  // Enable ALNS→BRKGA warm-start
   logger?: Logger;
+  /** Maximum time in milliseconds before aborting */
+  maxTimeMs?: number;
+  /** Target makespan for early stopping */
+  targetMakespan?: number;
+  /** Called with progress updates */
+  onProgress?: (progress: SolverProgress) => void;
+}
+
+export interface SolverProgress {
+  stage: 'ALNS' | 'BRKGA' | 'parallel';
+  iteration: number;
+  maxIterations: number;
+  bestMakespan: number;
+  elapsedMs: number;
 }
 
 export interface WorkerResult {
@@ -126,15 +141,36 @@ export class VrpRpdSolver {
       return this.solveParallel(options);
     }
 
+    const startTime = Date.now();
+    const targetMakespan = options.targetMakespan ?? 0;
+
     // Stage 1: ALNS
     this.logger.log('Starting Stage 1: ALNS...');
     const alns = new ALNS(this.problem, {
       maxIterations: options.alnsIterations ?? 500,
       initialTemp: options.initialTemp ?? 100,
       coolingRate: options.coolingRate ?? 0.9998,  // Paper spec
+      maxTimeMs: options.maxTimeMs ?? 0,
+      onProgress: options.onProgress
+        ? (progress: ALNSProgress) => {
+            options.onProgress!({
+              stage: 'ALNS',
+              iteration: progress.iteration,
+              maxIterations: progress.maxIterations,
+              bestMakespan: progress.bestMakespan,
+              elapsedMs: Date.now() - startTime,
+            });
+          }
+        : undefined,
     });
     const alnsSolution = alns.solve();
     this.logger.log(`ALNS completed. Best makespan: ${alnsSolution.makespan.toFixed(2)}`);
+
+    // Early stop if target reached
+    if (targetMakespan > 0 && alnsSolution.makespan <= targetMakespan) {
+      this.logger.log(`Target makespan ${targetMakespan.toFixed(2)} reached after ALNS.`);
+      return alnsSolution;
+    }
 
     // Stage 2: BRKGA with warm-start from ALNS
     this.logger.log('Starting Stage 2: BRKGA with warm-start...');
@@ -144,6 +180,18 @@ export class VrpRpdSolver {
       maxGenerations: options.maxGenerations ?? 20000,  // Paper spec
       warmStartSolution: warmStart ? alnsSolution : undefined,
       warmStartProportion: 0.15,  // Paper spec: 15% warm-start
+      maxTimeMs: options.maxTimeMs ?? 0,
+      onProgress: options.onProgress
+        ? (progress: BRKGAProgress) => {
+            options.onProgress!({
+              stage: 'BRKGA',
+              iteration: progress.generation,
+              maxIterations: progress.maxGenerations,
+              bestMakespan: progress.bestMakespan,
+              elapsedMs: Date.now() - startTime,
+            });
+          }
+        : undefined,
     });
     const brkgaSolution = brkga.solve();
     this.logger.log(`BRKGA completed. Best makespan: ${brkgaSolution.makespan.toFixed(2)}`);
@@ -160,10 +208,12 @@ export class VrpRpdSolver {
         maxIterations: options.alnsIterations ?? 500,
         initialTemp: options.initialTemp,
         coolingRate: options.coolingRate ?? 0.9998,
+        maxTimeMs: options.maxTimeMs ?? 0,
       }),
       this.runWorker('BRKGA', {
         populationSize: options.populationSize ?? 30000,
         maxGenerations: options.maxGenerations ?? 20000,
+        maxTimeMs: options.maxTimeMs ?? 0,
       }),
     ];
 

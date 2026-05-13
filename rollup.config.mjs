@@ -18,6 +18,21 @@ const config = [
     external: (id) => !id.startsWith('.') && !id.startsWith('/'),
   },
   {
+    input: 'src/cli.ts',
+    output: [
+      { file: 'dist/cli.mjs', format: 'esm', sourcemap: true, banner: '#!/usr/bin/env node' },
+      { file: 'dist/cli.cjs', format: 'cjs', sourcemap: true, banner: '#!/usr/bin/env node' },
+    ],
+    plugins: [
+      typescript({
+        tsconfig: './tsconfig.json',
+        declaration: false,
+        declarationMap: false,
+      }),
+    ],
+    external: (id) => !id.startsWith('.') && !id.startsWith('/'),
+  },
+  {
     input: 'src/index.ts',
     output: { file: 'dist/index.d.ts', format: 'esm' },
     plugins: [dts()],

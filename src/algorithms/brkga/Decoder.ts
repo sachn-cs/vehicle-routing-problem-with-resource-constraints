@@ -20,11 +20,11 @@ export interface Chromosome {
 }
 
 /**
- * Single-pass decoder for BRKGA.
+ * Multi-pass decoder for BRKGA.
  *
- * Currently assigns all customers in priority order without dependency checks.
- * The multi-pass schedule construction from the paper (scheduling delivery first,
- * then pickup after processing time) is not yet implemented.
+ * Pass 1: Schedule all deliveries in priority order (capacity-aware).
+ * Pass 2+: Schedule pickups only after delivery + processing time elapsed.
+ * Uses α genes for tie-breaking in priority sort.
  */
 export class Decoder {
   constructor(private readonly problem: VrpProblem) {}
@@ -33,56 +33,96 @@ export class Decoder {
     const routes = this.problem.vehicles.map((v: Vehicle) => new Route(v.id, []));
     const solution = new VrpSolution(this.problem, routes);
 
-    // Create customer order based on priority genes (π)
+    // Create customer order based on priority genes (π), with α as tie-breaker
     const customerIndices = this.problem.customers.map((_c: Customer, i: number) => i);
-    customerIndices.sort((a, b) => chromosome.priorities[a]! - chromosome.priorities[b]!);
+    customerIndices.sort((a, b) => {
+      const diff = chromosome.priorities[a]! - chromosome.priorities[b]!;
+      if (diff !== 0) return diff;
+      return chromosome.dependencies[a]! - chromosome.dependencies[b]!;
+    });
 
-    // Multi-pass scheduling
-    const scheduled = new Set<number>();
-    const maxPasses = this.problem.customers.length + 1; // Safety limit
+    // Track which customers have delivery scheduled and which have pickup scheduled
+    const deliveryScheduled = new Set<number>();
+    const pickupScheduled = new Set<number>();
+
+    // Pass 1: Schedule all deliveries in priority order with capacity check
+    for (const idx of customerIndices) {
+      const customer = this.problem.customers[idx];
+      if (!customer) continue;
+
+      const vehicleIndex = this.getVehicleAssignment(chromosome.assignments[idx], idx);
+      const route = routes[vehicleIndex];
+      if (!route) continue;
+
+      // Capacity check: can this vehicle handle one more delivery?
+      if (this.wouldExceedCapacity(route, customer, 'delivery')) {
+        // Try next vehicle
+        const altIndex = this.findCapableVehicle(routes, customer, 'delivery', vehicleIndex);
+        if (altIndex >= 0 && routes[altIndex]) {
+          routes[altIndex].nodes.push(customer.deliveryNodeId);
+          deliveryScheduled.add(idx);
+        }
+      } else {
+        route.nodes.push(customer.deliveryNodeId);
+        deliveryScheduled.add(idx);
+      }
+    }
+
+    // Calculate schedule to get resource ready times
+    solution.calculateSchedule();
+
+    // Pass 2+: Schedule pickups after processing time
+    const maxPasses = this.problem.customers.length + 1;
     let pass = 0;
 
-    while (scheduled.size < this.problem.customers.length && pass < maxPasses) {
+    while (pickupScheduled.size < deliveryScheduled.size && pass < maxPasses) {
       pass++;
       let madeProgress = false;
 
       for (const idx of customerIndices) {
-        if (scheduled.has(idx)) continue;
+        if (!deliveryScheduled.has(idx) || pickupScheduled.has(idx)) continue;
 
         const customer = this.problem.customers[idx];
         if (!customer) continue;
 
-        // Check if dependencies are satisfied
-        const canSchedule = this.canScheduleCustomer(customer, scheduled, solution.nodeTimes);
+        // Check if processing time has elapsed
+        const deliveryTime = solution.nodeTimes[customer.deliveryNodeId];
+        if (deliveryTime === undefined) continue;
 
-        if (canSchedule) {
-          // Get vehicle assignment from σ genes
-          const vehicleIndex = this.getVehicleAssignment(chromosome.assignments[idx], idx);
-          const route = routes[vehicleIndex];
+        // For now, schedule pickup on same vehicle as delivery
+        const vehicleIndex = this.getVehicleAssignment(chromosome.assignments[idx], idx);
+        const route = routes[vehicleIndex];
+        if (!route) continue;
 
-          if (route) {
-            // Insert delivery and pickup
-            route.nodes.push(customer.deliveryNodeId, customer.pickupNodeId);
-            scheduled.add(idx);
+        // Capacity check for pickup
+        if (this.wouldExceedCapacity(route, customer, 'pickup')) {
+          const altIndex = this.findCapableVehicle(routes, customer, 'pickup', vehicleIndex);
+          if (altIndex >= 0 && routes[altIndex]) {
+            routes[altIndex].nodes.push(customer.pickupNodeId);
+            pickupScheduled.add(idx);
             madeProgress = true;
           }
+        } else {
+          route.nodes.push(customer.pickupNodeId);
+          pickupScheduled.add(idx);
+          madeProgress = true;
         }
       }
 
-      if (!madeProgress && scheduled.size < this.problem.customers.length) {
-        // Force schedule remaining customers (infeasible but continue)
+      if (madeProgress) {
+        solution.calculateSchedule();
+      } else {
+        // Force remaining pickups to prevent infinite loop
         for (const idx of customerIndices) {
-          if (scheduled.has(idx)) continue;
-
+          if (!deliveryScheduled.has(idx) || pickupScheduled.has(idx)) continue;
           const customer = this.problem.customers[idx];
           if (!customer) continue;
 
           const vehicleIndex = this.getVehicleAssignment(chromosome.assignments[idx], idx);
           const route = routes[vehicleIndex];
-
           if (route) {
-            route.nodes.push(customer.deliveryNodeId, customer.pickupNodeId);
-            scheduled.add(idx);
+            route.nodes.push(customer.pickupNodeId);
+            pickupScheduled.add(idx);
           }
         }
         break;
@@ -94,32 +134,55 @@ export class Decoder {
   }
 
   /**
-   * Checks if a customer can be scheduled (dependencies satisfied).
-   * For VRP-RPD: pickup depends on delivery + processing time.
+   * Checks if adding a delivery or pickup would exceed vehicle capacity.
    */
-  private canScheduleCustomer(
-    customer: Customer,
-    scheduled: ReadonlySet<number>,
-    nodeTimes: Readonly<Record<number | string, number>>,
-  ): boolean {
-    const customerIndex = this.problem.customers.indexOf(customer);
-    if (customerIndex < 0) return false;
+  private wouldExceedCapacity(route: Route, _customer: Customer, type: 'delivery' | 'pickup'): boolean {
+    const vehicle = this.problem.vehicleMap.get(route.vehicleId);
+    if (!vehicle) return true;
 
-    // Prevent duplicate scheduling
-    if (scheduled.has(customerIndex)) {
-      return false;
+    let minLoad = 0;
+    let currentLoad = 0;
+
+    // Simulate load through existing route
+    for (const nodeId of route.nodes) {
+      if (this.problem.deliveryNodeMap.has(nodeId)) currentLoad--;
+      if (this.problem.pickupNodeMap.has(nodeId)) currentLoad++;
+      if (currentLoad < minLoad) minLoad = currentLoad;
     }
 
-    // If delivery has already been scheduled (cross-route), verify processing elapsed
-    const deliveryTime = nodeTimes[customer.deliveryNodeId];
-    if (deliveryTime !== undefined) {
-      const pickupTime = nodeTimes[customer.pickupNodeId];
-      if (pickupTime !== undefined && pickupTime < deliveryTime + customer.processingTime) {
-        return false;
+    // Add the new operation
+    if (type === 'delivery') currentLoad--;
+    else currentLoad++;
+    if (currentLoad < minLoad) minLoad = currentLoad;
+
+    const initialLoad = -minLoad;
+    return initialLoad > vehicle.capacity || initialLoad + currentLoad - minLoad > vehicle.capacity;
+  }
+
+  /**
+   * Finds an alternative vehicle that can handle the operation without exceeding capacity.
+   */
+  private findCapableVehicle(
+    routes: Route[],
+    customer: Customer,
+    type: 'delivery' | 'pickup',
+    preferredIndex: number,
+  ): number {
+    // Try preferred first
+    if (!this.wouldExceedCapacity(routes[preferredIndex]!, customer, type)) {
+      return preferredIndex;
+    }
+
+    // Try other vehicles
+    for (let i = 0; i < routes.length; i++) {
+      if (i === preferredIndex) continue;
+      const route = routes[i];
+      if (!route) continue;
+      if (!this.wouldExceedCapacity(route, customer, type)) {
+        return i;
       }
     }
-
-    return true;
+    return -1;
   }
 
   /**
@@ -127,7 +190,7 @@ export class Decoder {
    */
   private getVehicleAssignment(gene: number | undefined, _customerIndex: number): number {
     const preference = gene ?? 0.5;
-    return Math.floor(preference * this.problem.vehicles.length);
+    return Math.min(Math.floor(preference * this.problem.vehicles.length), this.problem.vehicles.length - 1);
   }
 
   /**
@@ -151,7 +214,6 @@ export class Decoder {
         const nodeId = route.nodes[pos];
         if (!nodeId) continue;
 
-        // Find which customer this node belongs to via O(1) Map lookup
         const customerIndex = this.problem.nodeToCustomerIndex.get(nodeId);
         if (customerIndex !== undefined) {
           // Priority based on position (earlier = lower value)
@@ -160,9 +222,15 @@ export class Decoder {
           // Assignment based on vehicle
           assignments[customerIndex] = rIdx / solution.routes.length;
 
-          // Dependencies and transfers default to 0.5
-          dependencies[customerIndex] = 0.5;
-          transfers[customerIndex] = 0.5;
+          // Dependencies based on delivery-pickup gap
+          const customer = this.problem.customers[customerIndex];
+          if (customer) {
+            const dTime = solution.nodeTimes[customer.deliveryNodeId] ?? 0;
+            const pTime = solution.nodeTimes[customer.pickupNodeId] ?? 0;
+            const gap = pTime - dTime - customer.processingTime;
+            dependencies[customerIndex] = Math.min(1, Math.max(0, gap / 100));
+            transfers[customerIndex] = 0.5;
+          }
         }
       }
     }

@@ -166,4 +166,76 @@ describe('VrpRpdSolver', () => {
     expect(solution.isFeasible()).toBe(true);
     expect(solution.makespan).toBeGreaterThan(0);
   });
+
+  test('should respect maxTimeMs timeout', async () => {
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
+    };
+    const customers = [new Customer(1, 1, 2, 50), new Customer(2, 3, 4, 50)];
+    const vehicles = [new Vehicle(1, 10)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    const solver = new VrpRpdSolver(problem);
+    const start = Date.now();
+    const solution = await solver.solve({ maxTimeMs: 1 });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(200);
+    expect(solution.isFeasible()).toBe(true);
+  });
+
+  test('should call onProgress', async () => {
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+    };
+    const customers = [new Customer(1, 1, 2, 50)];
+    const vehicles = [new Vehicle(1, 5)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    const progressCalls: Array<{ stage: string; iteration: number }> = [];
+    const solver = new VrpRpdSolver(problem);
+    await solver.solve({
+      alnsIterations: 50,
+      maxGenerations: 100,
+      onProgress: (p) => {
+        progressCalls.push({ stage: p.stage, iteration: p.iteration });
+      },
+    });
+
+    expect(progressCalls.length).toBeGreaterThan(0);
+    expect(progressCalls.some(p => p.stage === 'ALNS')).toBe(true);
+    expect(progressCalls.some(p => p.stage === 'BRKGA')).toBe(true);
+  });
+});
+
+describe('Solution serialization', () => {
+  test('should serialize and deserialize', () => {
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+    };
+    const customers = [new Customer(1, 1, 2, 50)];
+    const vehicles = [new Vehicle(1, 5)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    const routes = [new Route(1, [1, 2])];
+    const solution = new VrpSolution(problem, routes);
+    solution.calculateSchedule();
+
+    const serialized = solution.serialize();
+    expect(serialized.routes).toHaveLength(1);
+    expect(serialized.makespan).toBe(solution.makespan);
+
+    const deserialized = VrpSolution.deserialize(serialized, problem);
+    expect(deserialized.isComplete()).toBe(true);
+    expect(deserialized.makespan).toBe(solution.makespan);
+    expect(deserialized.routes[0]?.nodes).toEqual([1, 2]);
+  });
 });
