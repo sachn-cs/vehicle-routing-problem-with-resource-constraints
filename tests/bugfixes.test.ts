@@ -154,7 +154,7 @@ describe('C3 - TrafficAwareProblem distance contract', () => {
     );
 
     // Euclidean distance = 5
-    expect(problem.getDistance(0, 1)).toBeCloseTo(5, 5);
+    expect(problem.getDistance(0, 1)).to.be.closeTo(5, 0.000005);
     // Travel time should use traffic model
     expect(problem.getTravelTime(0, 1)).to.equal(99);
   });
@@ -227,7 +227,7 @@ describe('C5 - BRKGA best-solution immutability', () => {
     const routesCopy = solution.routes.map(r => [...r.nodes]);
     // Run solve again; previous solution should be unaffected
     const solution2 = brkga.solve();
-    expect(solution2.routes).not.to.equal(solution.routes);
+    expect(solution2.routes).to.not.equal(solution.routes);
     expect(solution.routes.map(r => [...r.nodes])).to.deep.equal(routesCopy);
   });
 });

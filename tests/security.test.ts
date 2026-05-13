@@ -48,16 +48,16 @@ describe('Security S1 - KML XML escaping', () => {
     expect(nameMatches).to.exist;
     for (const match of nameMatches!) {
       const inner = match.replace(/<name>/, '').replace(/<\/name>/, '');
-      expect(inner).not.to.include('<');
-      expect(inner).not.to.include('>');
+      expect(inner).to.not.include('<');
+      expect(inner).to.not.include('>');
     }
 
     const descMatches = kml.match(/<description>(.*?)<\/description>/g);
     expect(descMatches).to.exist;
     for (const match of descMatches!) {
       const inner = match.replace(/<description>/, '').replace(/<\/description>/, '');
-      expect(inner).not.to.include('<');
-      expect(inner).not.to.include('>');
+      expect(inner).to.not.include('<');
+      expect(inner).to.not.include('>');
     }
   });
 });

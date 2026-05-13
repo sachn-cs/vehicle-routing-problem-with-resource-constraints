@@ -31,7 +31,7 @@ describe('Problem', () => {
 
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
-    expect(problem.getDistance(0, 1)).toBeCloseTo(5, 5);
+    expect(problem.getDistance(0, 1)).to.be.closeTo(5, 0.000005);
   });
 });
 
