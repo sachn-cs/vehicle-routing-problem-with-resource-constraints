@@ -1,7 +1,7 @@
 /**
  * Represents a coordinate or location in the VRP problem.
  */
-export class Node {
+export class LocationNode {
   /**
    * @param id - Unique node identifier
    * @param x - X coordinate
@@ -88,7 +88,7 @@ export class Vehicle {
 /**
  * Main problem instance.
  */
-export class Problem {
+export class VrpProblem {
   public readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
 
   constructor(
@@ -224,3 +224,8 @@ export class Problem {
     return this.getDistance(fromId, toId) / speed;
   }
 }
+
+/** @deprecated Use {@link LocationNode} instead. */
+export const Node = LocationNode;
+/** @deprecated Use {@link VrpProblem} instead. */
+export const Problem = VrpProblem;

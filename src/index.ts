@@ -1,12 +1,16 @@
-// Core
-export { Problem, Node, Customer, CustomerWithTimeWindows, Vehicle } from './core/Problem.js';
+// Core (new names)
+export { VrpProblem, LocationNode, Customer, CustomerWithTimeWindows, Vehicle } from './core/Problem.js';
+export { VrpSolution, Route } from './core/Solution.js';
+
+// Backward-compatible aliases
+export { Problem, Node } from './core/Problem.js';
+export { Solution } from './core/Solution.js';
 
 // Errors
 export { VrpError, ValidationError, InfeasibleSolutionError, AlgorithmConvergenceError } from './errors.js';
 
 // Logger
 export { defaultLogger, type Logger } from './logger.js';
-export { Solution, Route } from './core/Solution.js';
 
 // Multi-depot support
 export { MultiDepotProblem, Depot } from './core/MultiDepotProblem.js';

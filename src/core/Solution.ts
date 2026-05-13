@@ -1,4 +1,4 @@
-import type { Problem, Customer, CustomerWithTimeWindows } from './Problem.js';
+import type { VrpProblem, Customer, CustomerWithTimeWindows } from './Problem.js';
 
 /**
  * Type guard to check if a customer has time windows.
@@ -48,7 +48,7 @@ export class Route {
 /**
  * Represents a full solution to the VRP-RPD problem.
  */
-export class Solution {
+export class VrpSolution {
   public routes: Route[];
   public makespan: number;
   public nodeTimes: Record<number | string, number>;
@@ -58,11 +58,11 @@ export class Solution {
   public totalCO2: number;
 
   /**
-   * @param problem - Problem instance this solution solves
+   * @param problem - VrpProblem instance this solution solves
    * @param routes - Vehicle routes; empty routes are created if not provided
    */
   constructor(
-    public readonly problem: Problem,
+    public readonly problem: VrpProblem,
     routes: Route[] = [],
   ) {
     this.routes = routes.length > 0 ? routes : problem.vehicles.map(v => new Route(v.id, []));
@@ -387,8 +387,8 @@ export class Solution {
   /**
    * @returns Deep copy of this solution
    */
-  clone(): Solution {
-    const cloned = new Solution(this.problem, this.routes.map(r => r.clone()));
+  clone(): VrpSolution {
+    const cloned = new VrpSolution(this.problem, this.routes.map(r => r.clone()));
     cloned.makespan = this.makespan;
     cloned.nodeTimes = { ...this.nodeTimes };
     cloned.resourceReadyTimes = { ...this.resourceReadyTimes };
@@ -415,3 +415,6 @@ export class Solution {
     };
   }
 }
+
+/** @deprecated Use {@link VrpSolution} instead. */
+export const Solution = VrpSolution;
