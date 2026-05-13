@@ -13,40 +13,40 @@ describe('Smoke Tests', () => {
   const vehicles = [new Vehicle(1, 5)];
   const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
-  test('creating problem instance', () => {
-    expect(problem).toBeDefined();
+  it('creating problem instance', () => {
+    expect(problem).to.exist;
   });
 
-  test('calculating schedule', () => {
+  it('calculating schedule', () => {
     const routes = [new Route(1, [1, 2])];
     const solution = new VrpSolution(problem, routes);
     const makespan = solution.calculateSchedule();
-    expect(makespan).toBeGreaterThan(0);
+    expect(makespan).to.be.greaterThan(0);
   });
 
-  test('ALNS solve', () => {
+  it('ALNS solve', () => {
     const alns = new ALNS(problem, { maxIterations: 10 });
     const alnsSolution = alns.solve();
-    expect(alnsSolution.isComplete()).toBe(true);
-    expect(alnsSolution.makespan).toBeGreaterThan(0);
+    expect(alnsSolution.isComplete()).to.be.true;
+    expect(alnsSolution.makespan).to.be.greaterThan(0);
   });
 
-  test('BRKGA solve', () => {
+  it('BRKGA solve', () => {
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
     const brkgaSolution = brkga.solve();
-    expect(brkgaSolution.isComplete()).toBe(true);
-    expect(brkgaSolution.makespan).toBeGreaterThan(0);
+    expect(brkgaSolution.isComplete()).to.be.true;
+    expect(brkgaSolution.makespan).to.be.greaterThan(0);
   });
 
-  test('ALNS input validation', () => {
+  it('ALNS input validation', () => {
     expect(() => {
       new ALNS(problem, { coolingRate: 1.5 });
-    }).toThrow('Cooling rate');
+    }).to.throw('Cooling rate');
   });
 
-  test('BRKGA input validation', () => {
+  it('BRKGA input validation', () => {
     expect(() => {
       new BRKGA(problem, { populationSize: -1 });
-    }).toThrow('Population size');
+    }).to.throw('Population size');
   });
 });

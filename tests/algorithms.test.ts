@@ -16,27 +16,27 @@ describe('Algorithm Correctness', () => {
     return new VrpProblem(nodes, customers, vehicles, 0);
   };
 
-  test('ALNS generateInitialSolution is always complete', () => {
+  it('ALNS generateInitialSolution is always complete', () => {
     const problem = makeProblem();
     const alns = new ALNS(problem, { maxIterations: 1 });
     const solution = alns.generateInitialSolution();
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.isFeasible()).toBe(true);
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.isFeasible()).to.be.true;
   });
 
-  test('ALNS operator stats return consistent lengths', () => {
+  it('ALNS operator stats return consistent lengths', () => {
     const problem = makeProblem();
     const alns = new ALNS(problem, { maxIterations: 1 });
     alns.solve();
     const stats = alns.getOperatorStats();
 
-    expect(stats.removalWeights.length).toBe(stats.removalOps.length);
-    expect(stats.insertionWeights.length).toBe(stats.insertionOps.length);
-    expect(stats.removalWeights.every(w => w > 0)).toBe(true);
-    expect(stats.insertionWeights.every(w => w > 0)).toBe(true);
+    expect(stats.removalWeights.length).to.equal(stats.removalOps.length);
+    expect(stats.insertionWeights.length).to.equal(stats.insertionOps.length);
+    expect(stats.removalWeights.every(w => w > 0)).to.be.true;
+    expect(stats.insertionWeights.every(w => w > 0)).to.be.true;
   });
 
-  test('BRKGA warm-start roundtrip preserves feasibility', () => {
+  it('BRKGA warm-start roundtrip preserves feasibility', () => {
     const problem = makeProblem();
     const alns = new ALNS(problem, { maxIterations: 10 });
     const initial = alns.generateInitialSolution();
@@ -48,26 +48,26 @@ describe('Algorithm Correctness', () => {
     });
     const solution = brkga.solve();
 
-    expect(solution.isFeasible()).toBe(true);
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('BRKGA with tiny population still returns complete solution', () => {
+  it('BRKGA with tiny population still returns complete solution', () => {
     const problem = makeProblem();
     const brkga = new BRKGA(problem, { populationSize: 2, maxGenerations: 2 });
     const solution = brkga.solve();
 
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('Decoder produces complete solution', () => {
+  it('Decoder produces complete solution', () => {
     const problem = makeProblem();
     const brkga = new BRKGA(problem, { populationSize: 5, maxGenerations: 3 });
     const solution = brkga.solve();
 
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.checkCapacity()).toBe(true);
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.checkCapacity()).to.be.true;
   });
 });

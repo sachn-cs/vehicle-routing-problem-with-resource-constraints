@@ -32,7 +32,7 @@ describe('Benchmarks', () => {
     return new VrpProblem(nodes, customers, vehicles, 0);
   }
 
-  test('should solve 20-customer instance within 10 seconds', async () => {
+  it('should solve 20-customer instance within 10 seconds', async () => {
     const problem = generateGridProblem(40); // 40 nodes = 20 customers
     const solver = new VrpRpdSolver(problem);
 
@@ -45,13 +45,13 @@ describe('Benchmarks', () => {
     });
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(15000);
-    expect(solution.isFeasible()).toBe(true);
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(elapsed).to.be.lessThan(15000);
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('should solve 50-customer instance and produce feasible solution', async () => {
+  it('should solve 50-customer instance and produce feasible solution', async () => {
     const problem = generateGridProblem(100); // 100 nodes = 50 customers
     const solver = new VrpRpdSolver(problem);
 
@@ -62,12 +62,12 @@ describe('Benchmarks', () => {
       maxTimeMs: 30000,
     });
 
-    expect(solution.isFeasible()).toBe(true);
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('should respect target makespan early stopping', async () => {
+  it('should respect target makespan early stopping', async () => {
     const problem = generateGridProblem(40); // 40 nodes = 20 customers
     const solver = new VrpRpdSolver(problem);
 
@@ -81,11 +81,11 @@ describe('Benchmarks', () => {
     const elapsed = Date.now() - start;
 
     // Should stop early because any feasible solution will have makespan < 1000
-    expect(solution.makespan).toBeLessThan(1000);
-    expect(elapsed).toBeLessThan(15000);
+    expect(solution.makespan).to.be.lessThan(1000);
+    expect(elapsed).to.be.lessThan(15000);
   });
 
-  test('should handle timeout gracefully', async () => {
+  it('should handle timeout gracefully', async () => {
     const problem = generateGridProblem(40); // 40 nodes = 20 customers
     const solver = new VrpRpdSolver(problem);
 
@@ -100,7 +100,7 @@ describe('Benchmarks', () => {
 
     // Timeout is checked at iteration boundaries, so elapsed may exceed 500ms
     // but should be well under the full-run time (~10s)
-    expect(elapsed).toBeLessThan(5000);
-    expect(solution.isFeasible()).toBe(true);
+    expect(elapsed).to.be.lessThan(5000);
+    expect(solution.isFeasible()).to.be.true;
   });
 });

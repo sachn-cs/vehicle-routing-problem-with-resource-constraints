@@ -5,7 +5,7 @@ import { VrpSolution, Route } from '../src/core/Solution.js';
 import { VrpRpdSolver } from '../src/index.js';
 
 describe('Problem', () => {
-  test('should create a problem instance', () => {
+  it('should create a problem instance', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 10, 'D1'),
@@ -16,12 +16,12 @@ describe('Problem', () => {
 
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
-    expect(problem.customers.length).toBe(1);
-    expect(problem.vehicles.length).toBe(1);
-    expect(problem.depotNodeId).toBe(0);
+    expect(problem.customers.length).to.equal(1);
+    expect(problem.vehicles.length).to.equal(1);
+    expect(problem.depotNodeId).to.equal(0);
   });
 
-  test('should calculate distance matrix', () => {
+  it('should calculate distance matrix', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 3, 4, 'D1'),
@@ -36,7 +36,7 @@ describe('Problem', () => {
 });
 
 describe('Solution', () => {
-  test('should create a solution', () => {
+  it('should create a solution', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 10, 'D1'),
@@ -49,11 +49,11 @@ describe('Solution', () => {
     const routes = [new Route(1, [1, 2])];
     const solution = new VrpSolution(problem, routes);
 
-    expect(solution.routes.length).toBe(1);
-    expect(solution.isComplete()).toBe(true);
+    expect(solution.routes.length).to.equal(1);
+    expect(solution.isComplete()).to.be.true;
   });
 
-  test('should calculate schedule and makespan', () => {
+  it('should calculate schedule and makespan', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -67,11 +67,11 @@ describe('Solution', () => {
     const solution = new VrpSolution(problem, routes);
     const makespan = solution.calculateSchedule();
 
-    expect(makespan).toBeGreaterThan(0);
-    expect(solution.makespan).toBe(makespan);
+    expect(makespan).to.be.greaterThan(0);
+    expect(solution.makespan).to.equal(makespan);
   });
 
-  test('should check capacity constraints', () => {
+  it('should check capacity constraints', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -84,10 +84,10 @@ describe('Solution', () => {
     const routes = [new Route(1, [1, 2])];
     const solution = new VrpSolution(problem, routes);
 
-    expect(solution.checkCapacity()).toBe(true);
+    expect(solution.checkCapacity()).to.be.true;
   });
 
-  test('should detect incomplete solutions', () => {
+  it('should detect incomplete solutions', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -100,12 +100,12 @@ describe('Solution', () => {
     const routes = [new Route(1, [1])]; // Missing pickup
     const solution = new VrpSolution(problem, routes);
 
-    expect(solution.isComplete()).toBe(false);
+    expect(solution.isComplete()).to.be.false;
   });
 });
 
 describe('ALNS', () => {
-  test('should solve a small problem', () => {
+  it('should solve a small problem', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -123,13 +123,13 @@ describe('ALNS', () => {
 
     // ALNS is stochastic; initial solution is always complete,
     // final solution may vary due to simulated annealing.
-    expect(initialSolution.isComplete()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(initialSolution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 });
 
 describe('BRKGA', () => {
-  test('should solve a small problem', () => {
+  it('should solve a small problem', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -144,13 +144,13 @@ describe('BRKGA', () => {
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
     const solution = brkga.solve();
 
-    expect(solution.isFeasible()).toBe(true);
-    expect(solution.isComplete()).toBe(true);
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
   });
 });
 
 describe('VrpRpdSolver', () => {
-  test('should solve with both algorithms', async () => {
+  it('should solve with both algorithms', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -163,11 +163,11 @@ describe('VrpRpdSolver', () => {
     const solver = new VrpRpdSolver(problem);
     const solution = await solver.solve({ alnsIterations: 10, maxGenerations: 10 });
 
-    expect(solution.isFeasible()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('should respect maxTimeMs timeout', async () => {
+  it('should respect maxTimeMs timeout', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -184,11 +184,11 @@ describe('VrpRpdSolver', () => {
     const solution = await solver.solve({ maxTimeMs: 1 });
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(200);
-    expect(solution.isFeasible()).toBe(true);
+    expect(elapsed).to.be.lessThan(200);
+    expect(solution.isFeasible()).to.be.true;
   });
 
-  test('should call onProgress', async () => {
+  it('should call onProgress', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -208,14 +208,14 @@ describe('VrpRpdSolver', () => {
       },
     });
 
-    expect(progressCalls.length).toBeGreaterThan(0);
-    expect(progressCalls.some(p => p.stage === 'ALNS')).toBe(true);
-    expect(progressCalls.some(p => p.stage === 'BRKGA')).toBe(true);
+    expect(progressCalls.length).to.be.greaterThan(0);
+    expect(progressCalls.some(p => p.stage === 'ALNS')).to.be.true;
+    expect(progressCalls.some(p => p.stage === 'BRKGA')).to.be.true;
   });
 });
 
 describe('Solution serialization', () => {
-  test('should serialize and deserialize', () => {
+  it('should serialize and deserialize', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -230,12 +230,12 @@ describe('Solution serialization', () => {
     solution.calculateSchedule();
 
     const serialized = solution.serialize();
-    expect(serialized.routes).toHaveLength(1);
-    expect(serialized.makespan).toBe(solution.makespan);
+    expect(serialized.routes).to.have.lengthOf(1);
+    expect(serialized.makespan).to.equal(solution.makespan);
 
     const deserialized = VrpSolution.deserialize(serialized, problem);
-    expect(deserialized.isComplete()).toBe(true);
-    expect(deserialized.makespan).toBe(solution.makespan);
-    expect(deserialized.routes[0]?.nodes).toEqual([1, 2]);
+    expect(deserialized.isComplete()).to.be.true;
+    expect(deserialized.makespan).to.equal(solution.makespan);
+    expect(deserialized.routes[0]?.nodes).to.deep.equal([1, 2]);
   });
 });

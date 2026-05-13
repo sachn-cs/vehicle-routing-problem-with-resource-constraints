@@ -3,7 +3,7 @@ import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem
 import type { Logger } from '../src/logger.js';
 
 describe('Logger Injection', () => {
-  test('ALNS accepts custom logger without throwing', () => {
+  it('ALNS accepts custom logger without throwing', () => {
     const logs: string[] = [];
     const logger: Logger = {
       log: (msg: string) => logs.push(msg),
@@ -15,10 +15,10 @@ describe('Logger Injection', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const alns = new ALNS(problem, { maxIterations: 1, logger });
-    expect(() => alns.solve()).not.toThrow();
+    expect(() => alns.solve()).not.to.throw();
   });
 
-  test('default logger is silent', () => {
+  it('default logger is silent', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 10, 0), 2: new LocationNode(2, 20, 0) };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
@@ -26,6 +26,6 @@ describe('Logger Injection', () => {
 
     // Should not throw or log anything
     const alns = new ALNS(problem, { maxIterations: 1 });
-    expect(() => alns.solve()).not.toThrow();
+    expect(() => alns.solve()).not.to.throw();
   });
 });

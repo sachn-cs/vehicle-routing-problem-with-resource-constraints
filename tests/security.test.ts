@@ -4,7 +4,7 @@ import { GISExporter } from '../src/export/GISExporter.js';
 import { isWorkerData, validateWorkerData } from '../src/workerValidation.js';
 
 describe('Security S1 - KML XML escaping', () => {
-  test('escapeXml helper escapes all XML entities', () => {
+  it('escapeXml helper escapes all XML entities', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -19,16 +19,16 @@ describe('Security S1 - KML XML escaping', () => {
     const exporter = new GISExporter(solution, problem);
     const escapeXml = (exporter as unknown as { escapeXml: (s: string) => string }).escapeXml.bind(exporter);
 
-    expect(escapeXml('foo < bar')).toBe('foo &lt; bar');
-    expect(escapeXml('foo > bar')).toBe('foo &gt; bar');
-    expect(escapeXml('foo & bar')).toBe('foo &amp; bar');
-    expect(escapeXml('foo " bar')).toBe('foo &quot; bar');
-    expect(escapeXml('<script>alert("xss")</script>')).toBe(
+    expect(escapeXml('foo < bar')).to.equal('foo &lt; bar');
+    expect(escapeXml('foo > bar')).to.equal('foo &gt; bar');
+    expect(escapeXml('foo & bar')).to.equal('foo &amp; bar');
+    expect(escapeXml('foo " bar')).to.equal('foo &quot; bar');
+    expect(escapeXml('<script>alert("xss")</script>')).to.equal(
       '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;',
     );
   });
 
-  test('KML output does not contain raw angle brackets inside text nodes', () => {
+  it('KML output does not contain raw angle brackets inside text nodes', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -45,25 +45,25 @@ describe('Security S1 - KML XML escaping', () => {
 
     // The content between <name> and </name> should not contain unescaped < or >
     const nameMatches = kml.match(/<name>(.*?)<\/name>/g);
-    expect(nameMatches).toBeDefined();
+    expect(nameMatches).to.exist;
     for (const match of nameMatches!) {
       const inner = match.replace(/<name>/, '').replace(/<\/name>/, '');
-      expect(inner).not.toContain('<');
-      expect(inner).not.toContain('>');
+      expect(inner).not.to.include('<');
+      expect(inner).not.to.include('>');
     }
 
     const descMatches = kml.match(/<description>(.*?)<\/description>/g);
-    expect(descMatches).toBeDefined();
+    expect(descMatches).to.exist;
     for (const match of descMatches!) {
       const inner = match.replace(/<description>/, '').replace(/<\/description>/, '');
-      expect(inner).not.toContain('<');
-      expect(inner).not.toContain('>');
+      expect(inner).not.to.include('<');
+      expect(inner).not.to.include('>');
     }
   });
 });
 
 describe('Security S2 - CSV escaping', () => {
-  test('escapeCsv wraps values containing commas in quotes', () => {
+  it('escapeCsv wraps values containing commas in quotes', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -76,10 +76,10 @@ describe('Security S2 - CSV escaping', () => {
     const exporter = new GISExporter(solution, problem);
     const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
-    expect(escapeCsv('hello, world')).toBe('"hello, world"');
+    expect(escapeCsv('hello, world')).to.equal('"hello, world"');
   });
 
-  test('escapeCsv doubles inner quotes', () => {
+  it('escapeCsv doubles inner quotes', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -92,10 +92,10 @@ describe('Security S2 - CSV escaping', () => {
     const exporter = new GISExporter(solution, problem);
     const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
-    expect(escapeCsv('say "hello"')).toBe('"say ""hello"""');
+    expect(escapeCsv('say "hello"')).to.equal('"say ""hello"""');
   });
 
-  test('escapeCsv handles newlines', () => {
+  it('escapeCsv handles newlines', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -108,11 +108,11 @@ describe('Security S2 - CSV escaping', () => {
     const exporter = new GISExporter(solution, problem);
     const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
-    expect(escapeCsv('line1\nline2')).toBe('"line1\nline2"');
-    expect(escapeCsv('line1\rline2')).toBe('"line1\rline2"');
+    expect(escapeCsv('line1\nline2')).to.equal('"line1\nline2"');
+    expect(escapeCsv('line1\rline2')).to.equal('"line1\rline2"');
   });
 
-  test('CSV output remains parseable with special characters', () => {
+  it('CSV output remains parseable with special characters', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot, Main'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -131,60 +131,60 @@ describe('Security S2 - CSV escaping', () => {
     for (const line of lines) {
       const cols = line.split(',');
       // With proper escaping, the depot name should not inflate column count
-      expect(cols.length).toBe(8);
+      expect(cols.length).to.equal(8);
     }
   });
 });
 
 describe('Security S3 - Problem constructor validation', () => {
-  test('rejects empty nodes', () => {
-    expect(() => new VrpProblem({}, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('nodes cannot be empty');
+  it('rejects empty nodes', () => {
+    expect(() => new VrpProblem({}, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).to.throw('nodes cannot be empty');
   });
 
-  test('rejects empty customers', () => {
+  it('rejects empty customers', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
     };
-    expect(() => new VrpProblem(nodes, [], [new Vehicle(1, 10)], 0)).toThrow('customers cannot be empty');
+    expect(() => new VrpProblem(nodes, [], [new Vehicle(1, 10)], 0)).to.throw('customers cannot be empty');
   });
 
-  test('rejects empty vehicles', () => {
+  it('rejects empty vehicles', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
       2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [], 0)).toThrow('vehicles cannot be empty');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [], 0)).to.throw('vehicles cannot be empty');
   });
 
-  test('rejects NaN coordinates', () => {
+  it('rejects NaN coordinates', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, NaN, 0, 'D1'),
       2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).to.throw('invalid coordinates');
   });
 
-  test('rejects Infinity coordinates', () => {
+  it('rejects Infinity coordinates', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, Infinity, 0, 'D1'),
       2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).to.throw('invalid coordinates');
   });
 
-  test('rejects negative coordinates', () => {
+  it('rejects negative coordinates', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, -10, 0, 'D1'),
       2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('negative coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).to.throw('negative coordinates');
   });
 
-  test('rejects duplicate customer IDs', () => {
+  it('rejects duplicate customer IDs', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -197,10 +197,10 @@ describe('Security S3 - Problem constructor validation', () => {
         [new Vehicle(1, 10)],
         0,
       ),
-    ).toThrow('Duplicate customer ID');
+    ).to.throw('Duplicate customer ID');
   });
 
-  test('rejects duplicate vehicle IDs', () => {
+  it('rejects duplicate vehicle IDs', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -213,10 +213,10 @@ describe('Security S3 - Problem constructor validation', () => {
         [new Vehicle(1, 10), new Vehicle(1, 10)],
         0,
       ),
-    ).toThrow('Duplicate vehicle ID');
+    ).to.throw('Duplicate vehicle ID');
   });
 
-  test('rejects customer referencing non-existent delivery node', () => {
+  it('rejects customer referencing non-existent delivery node', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -224,10 +224,10 @@ describe('Security S3 - Problem constructor validation', () => {
     };
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 999, 2, 50)], [new Vehicle(1, 10)], 0),
-    ).toThrow('non-existent delivery node');
+    ).to.throw('non-existent delivery node');
   });
 
-  test('rejects customer referencing non-existent pickup node', () => {
+  it('rejects customer referencing non-existent pickup node', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -235,10 +235,10 @@ describe('Security S3 - Problem constructor validation', () => {
     };
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 1, 999, 50)], [new Vehicle(1, 10)], 0),
-    ).toThrow('non-existent pickup node');
+    ).to.throw('non-existent pickup node');
   });
 
-  test('rejects depot node ID not present in nodes', () => {
+  it('rejects depot node ID not present in nodes', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -246,10 +246,10 @@ describe('Security S3 - Problem constructor validation', () => {
     };
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 999),
-    ).toThrow('Depot node 999 does not exist');
+    ).to.throw('Depot node 999 does not exist');
   });
 
-  test('rejects negative processing time', () => {
+  it('rejects negative processing time', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -257,10 +257,10 @@ describe('Security S3 - Problem constructor validation', () => {
     };
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 1, 2, -1)], [new Vehicle(1, 10)], 0),
-    ).toThrow('negative processingTime');
+    ).to.throw('negative processingTime');
   });
 
-  test('rejects zero or negative capacity', () => {
+  it('rejects zero or negative capacity', () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -268,29 +268,29 @@ describe('Security S3 - Problem constructor validation', () => {
     };
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 0)], 0),
-    ).toThrow('positive capacity');
+    ).to.throw('positive capacity');
     expect(() =>
       new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, -5)], 0),
-    ).toThrow('positive capacity');
+    ).to.throw('positive capacity');
   });
 });
 
 describe('Security S4 - Worker data validation', () => {
-  test('isWorkerData rejects non-object input', () => {
-    expect(isWorkerData(null)).toBe(false);
-    expect(isWorkerData(undefined)).toBe(false);
-    expect(isWorkerData('string')).toBe(false);
-    expect(isWorkerData(42)).toBe(false);
-    expect(isWorkerData([])).toBe(false);
+  it('isWorkerData rejects non-object input', () => {
+    expect(isWorkerData(null)).to.be.false;
+    expect(isWorkerData(undefined)).to.be.false;
+    expect(isWorkerData('string')).to.be.false;
+    expect(isWorkerData(42)).to.be.false;
+    expect(isWorkerData([])).to.be.false;
   });
 
-  test('isWorkerData rejects missing fields', () => {
-    expect(isWorkerData({})).toBe(false);
-    expect(isWorkerData({ nodes: {}, customers: [] })).toBe(false);
-    expect(isWorkerData({ nodes: {}, customers: [], vehicles: [], depotNodeId: 0 })).toBe(false);
+  it('isWorkerData rejects missing fields', () => {
+    expect(isWorkerData({})).to.be.false;
+    expect(isWorkerData({ nodes: {}, customers: [] })).to.be.false;
+    expect(isWorkerData({ nodes: {}, customers: [], vehicles: [], depotNodeId: 0 })).to.be.false;
   });
 
-  test('isWorkerData rejects invalid algorithm type', () => {
+  it('isWorkerData rejects invalid algorithm type', () => {
     expect(
       isWorkerData({
         nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
@@ -300,10 +300,10 @@ describe('Security S4 - Worker data validation', () => {
         type: 'INVALID',
         options: {},
       }),
-    ).toBe(false);
+    ).to.be.false;
   });
 
-  test('isWorkerData accepts valid ALNS data', () => {
+  it('isWorkerData accepts valid ALNS data', () => {
     expect(
       isWorkerData({
         nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
@@ -313,10 +313,10 @@ describe('Security S4 - Worker data validation', () => {
         type: 'ALNS',
         options: {},
       }),
-    ).toBe(true);
+    ).to.be.true;
   });
 
-  test('validateWorkerData rejects empty nodes', () => {
+  it('validateWorkerData rejects empty nodes', () => {
     const error = validateWorkerData({
       nodes: {},
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -325,10 +325,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toBe('nodes cannot be empty');
+    expect(error).to.equal('nodes cannot be empty');
   });
 
-  test('validateWorkerData rejects empty customers', () => {
+  it('validateWorkerData rejects empty customers', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [],
@@ -337,10 +337,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toBe('customers cannot be empty');
+    expect(error).to.equal('customers cannot be empty');
   });
 
-  test('validateWorkerData rejects empty vehicles', () => {
+  it('validateWorkerData rejects empty vehicles', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -349,10 +349,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toBe('vehicles cannot be empty');
+    expect(error).to.equal('vehicles cannot be empty');
   });
 
-  test('validateWorkerData rejects missing node reference in customer', () => {
+  it('validateWorkerData rejects missing node reference in customer', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 999, pickupNodeId: 0, processingTime: 0 }],
@@ -361,10 +361,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('deliveryNodeId 999 not found');
+    expect(error).to.include('deliveryNodeId 999 not found');
   });
 
-  test('validateWorkerData rejects non-finite node coordinates', () => {
+  it('validateWorkerData rejects non-finite node coordinates', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: NaN, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -373,10 +373,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('x must be a finite number');
+    expect(error).to.include('x must be a finite number');
   });
 
-  test('validateWorkerData rejects duplicate customer IDs', () => {
+  it('validateWorkerData rejects duplicate customer IDs', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [
@@ -388,10 +388,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('duplicate customer ID');
+    expect(error).to.include('duplicate customer ID');
   });
 
-  test('validateWorkerData rejects duplicate vehicle IDs', () => {
+  it('validateWorkerData rejects duplicate vehicle IDs', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -400,10 +400,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('duplicate vehicle ID');
+    expect(error).to.include('duplicate vehicle ID');
   });
 
-  test('validateWorkerData rejects invalid vehicle capacity', () => {
+  it('validateWorkerData rejects invalid vehicle capacity', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -412,10 +412,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('capacity must be > 0');
+    expect(error).to.include('capacity must be > 0');
   });
 
-  test('validateWorkerData rejects missing depot node', () => {
+  it('validateWorkerData rejects missing depot node', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -424,10 +424,10 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toContain('depotNodeId 999 not found');
+    expect(error).to.include('depotNodeId 999 not found');
   });
 
-  test('validateWorkerData accepts valid data', () => {
+  it('validateWorkerData accepts valid data', () => {
     const error = validateWorkerData({
       nodes: { 0: { id: 0, x: 0, y: 0, name: 'Depot' } },
       customers: [{ id: 1, deliveryNodeId: 0, pickupNodeId: 0, processingTime: 0 }],
@@ -436,6 +436,6 @@ describe('Security S4 - Worker data validation', () => {
       type: 'ALNS',
       options: {},
     });
-    expect(error).toBeNull();
+    expect(error).to.be.null;
   });
 });

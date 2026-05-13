@@ -3,63 +3,63 @@ import { VrpSolution, Route } from '../src/core/Solution.js';
 import { ValidationError } from '../src/errors.js';
 
 describe('Edge Cases', () => {
-  test('rejects empty nodes', () => {
-    expect(() => new VrpProblem({}, [], [new Vehicle(1, 5)])).toThrow(ValidationError);
+  it('rejects empty nodes', () => {
+    expect(() => new VrpProblem({}, [], [new Vehicle(1, 5)])).to.throw(ValidationError);
   });
 
-  test('rejects empty customers', () => {
-    expect(() => new VrpProblem({ 0: new LocationNode(0, 0, 0) }, [], [new Vehicle(1, 5)])).toThrow(ValidationError);
+  it('rejects empty customers', () => {
+    expect(() => new VrpProblem({ 0: new LocationNode(0, 0, 0) }, [], [new Vehicle(1, 5)])).to.throw(ValidationError);
   });
 
-  test('rejects empty vehicles', () => {
-    expect(() => new VrpProblem({ 0: new LocationNode(0, 0, 0) }, [new Customer(1, 0, 0, 10)], [])).toThrow(ValidationError);
+  it('rejects empty vehicles', () => {
+    expect(() => new VrpProblem({ 0: new LocationNode(0, 0, 0) }, [new Customer(1, 0, 0, 10)], [])).to.throw(ValidationError);
   });
 
-  test('rejects duplicate customer IDs', () => {
+  it('rejects duplicate customer IDs', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 1, 1) };
     const customers = [new Customer(1, 1, 1, 10), new Customer(1, 1, 1, 10)];
-    expect(() => new VrpProblem(nodes, customers, [new Vehicle(1, 5)])).toThrow(ValidationError);
+    expect(() => new VrpProblem(nodes, customers, [new Vehicle(1, 5)])).to.throw(ValidationError);
   });
 
-  test('rejects duplicate vehicle IDs', () => {
+  it('rejects duplicate vehicle IDs', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 1, 1) };
     const customers = [new Customer(1, 1, 1, 10)];
-    expect(() => new VrpProblem(nodes, customers, [new Vehicle(1, 5), new Vehicle(1, 5)])).toThrow(ValidationError);
+    expect(() => new VrpProblem(nodes, customers, [new Vehicle(1, 5), new Vehicle(1, 5)])).to.throw(ValidationError);
   });
 
-  test('rejects negative coordinates', () => {
+  it('rejects negative coordinates', () => {
     expect(() => new VrpProblem(
       { 0: new LocationNode(0, -1, 0) },
       [new Customer(1, 0, 0, 10)],
       [new Vehicle(1, 5)]
-    )).toThrow(ValidationError);
+    )).to.throw(ValidationError);
   });
 
-  test('rejects zero capacity', () => {
+  it('rejects zero capacity', () => {
     expect(() => new VrpProblem(
       { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 1, 1) },
       [new Customer(1, 1, 1, 10)],
       [new Vehicle(1, 0)]
-    )).toThrow(ValidationError);
+    )).to.throw(ValidationError);
   });
 
-  test('rejects negative processing time', () => {
+  it('rejects negative processing time', () => {
     expect(() => new VrpProblem(
       { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 1, 1) },
       [new Customer(1, 1, 1, -5)],
       [new Vehicle(1, 5)]
-    )).toThrow(ValidationError);
+    )).to.throw(ValidationError);
   });
 
-  test('rejects non-existent delivery node', () => {
+  it('rejects non-existent delivery node', () => {
     expect(() => new VrpProblem(
       { 0: new LocationNode(0, 0, 0) },
       [new Customer(1, 99, 0, 10)],
       [new Vehicle(1, 5)]
-    )).toThrow(ValidationError);
+    )).to.throw(ValidationError);
   });
 
-  test('single customer single vehicle produces complete solution', () => {
+  it('single customer single vehicle produces complete solution', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 10, 0), 2: new LocationNode(2, 20, 0) };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
@@ -69,12 +69,12 @@ describe('Edge Cases', () => {
     const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
-    expect(solution.isComplete()).toBe(true);
-    expect(solution.checkCapacity()).toBe(true);
-    expect(solution.makespan).toBeGreaterThan(0);
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.checkCapacity()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  test('clone produces independent copy', () => {
+  it('clone produces independent copy', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 10, 0), 2: new LocationNode(2, 20, 0) };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
@@ -87,11 +87,11 @@ describe('Edge Cases', () => {
     const cloned = solution.clone();
     cloned.routes[0].addNode(999);
 
-    expect(solution.routes[0].hasNode(999)).toBe(false);
-    expect(cloned.routes[0].hasNode(999)).toBe(true);
+    expect(solution.routes[0].hasNode(999)).to.be.false;
+    expect(cloned.routes[0].hasNode(999)).to.be.true;
   });
 
-  test('calculateSchedule is idempotent', () => {
+  it('calculateSchedule is idempotent', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 10, 0), 2: new LocationNode(2, 20, 0) };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
@@ -102,10 +102,10 @@ describe('Edge Cases', () => {
     const m1 = solution.calculateSchedule();
     const m2 = solution.calculateSchedule();
 
-    expect(m1).toBe(m2);
+    expect(m1).to.equal(m2);
   });
 
-  test('isFeasible implies isComplete, checkCapacity, checkTimeWindows', () => {
+  it('isFeasible implies isComplete, checkCapacity, checkTimeWindows', () => {
     const nodes = { 0: new LocationNode(0, 0, 0), 1: new LocationNode(1, 10, 0), 2: new LocationNode(2, 20, 0) };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
@@ -116,9 +116,9 @@ describe('Edge Cases', () => {
     solution.calculateSchedule();
 
     if (solution.isFeasible()) {
-      expect(solution.isComplete()).toBe(true);
-      expect(solution.checkCapacity()).toBe(true);
-      expect(solution.checkTimeWindows()).toBe(true);
+      expect(solution.isComplete()).to.be.true;
+      expect(solution.checkCapacity()).to.be.true;
+      expect(solution.checkTimeWindows()).to.be.true;
     }
   });
 });
