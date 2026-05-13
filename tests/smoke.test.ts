@@ -1,7 +1,7 @@
-import { ALNS } from '../src/algorithms/alns/ALNS';
-import { BRKGA } from '../src/algorithms/brkga/BRKGA';
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem';
-import { VrpSolution, Route } from '../src/core/Solution';
+import { ALNS } from '../src/algorithms/alns/ALNS.js';
+import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { VrpSolution, Route } from '../src/core/Solution.js';
 import { expect } from 'chai';
 
 describe('Smoke Tests', () => {
