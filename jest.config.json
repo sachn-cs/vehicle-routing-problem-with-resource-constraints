@@ -2,11 +2,8 @@
   "preset": "ts-jest/presets/default-esm",
   "testEnvironment": "node",
   "extensionsToTreatAsEsm": [".ts"],
-  "moduleNameMapper": {
-    "^(\\.{1,2}/.*)\\.js$": "$1"
-  },
   "transform": {
-    "^.+\\.tsx?$": [
+    "^.+\\.tsx?": [
       "ts-jest",
       {
         "useESM": true,
@@ -14,6 +11,11 @@
       }
     ]
   },
-  "testMatch": ["**/tests/**/*.test.ts"],
-  "moduleFileExtensions": ["ts", "tsx", "js", "jsx"]
+  "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.d.ts"],
+  "coverageProvider": "v8",
+  "coverageReporters": ["text", "lcov", "html"],
+  "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  }
 }
