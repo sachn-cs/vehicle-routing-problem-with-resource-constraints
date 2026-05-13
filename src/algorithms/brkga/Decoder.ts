@@ -137,10 +137,10 @@ export class Decoder {
   encode(solution: VrpSolution): Chromosome {
     const n = this.problem.customers.length;
 
-    const priorities = new Array(n).fill(0);
-    const assignments = new Array(n).fill(0);
-    const dependencies = new Array(n).fill(0);
-    const transfers = new Array(n).fill(0);
+    const priorities = new Array<number>(n).fill(0);
+    const assignments = new Array<number>(n).fill(0);
+    const dependencies = new Array<number>(n).fill(0);
+    const transfers = new Array<number>(n).fill(0);
 
     // Encode priorities based on position in routes
     for (let rIdx = 0; rIdx < solution.routes.length; rIdx++) {

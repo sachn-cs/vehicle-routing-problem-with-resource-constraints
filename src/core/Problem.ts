@@ -112,7 +112,7 @@ export class VrpProblem {
     }
 
     for (const [, node] of nodeEntries) {
-      if (!node) continue;
+      if (!node) continue; // eslint-disable-line @typescript-eslint/no-unnecessary-condition
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
         throw new ValidationError(`Node ${node.id} has invalid coordinates: x=${node.x}, y=${node.y}`);
       }

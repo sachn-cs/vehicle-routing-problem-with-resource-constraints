@@ -88,16 +88,16 @@ export class ALNS {
     // 4 repair operators from paper
     this.insertionOps = Object.keys(InsertionOperators);
 
-    this.removalWeights = new Array(this.removalOps.length).fill(1);
-    this.insertionWeights = new Array(this.insertionOps.length).fill(1);
+    this.removalWeights = new Array<number>(this.removalOps.length).fill(1);
+    this.insertionWeights = new Array<number>(this.insertionOps.length).fill(1);
 
     this.scores = {
-      removal: new Array(this.removalOps.length).fill(0),
-      insertion: new Array(this.insertionOps.length).fill(0),
+      removal: new Array<number>(this.removalOps.length).fill(0),
+      insertion: new Array<number>(this.insertionOps.length).fill(0),
     };
     this.usage = {
-      removal: new Array(this.removalOps.length).fill(0),
-      insertion: new Array(this.insertionOps.length).fill(0),
+      removal: new Array<number>(this.removalOps.length).fill(0),
+      insertion: new Array<number>(this.insertionOps.length).fill(0),
     };
     this.lambda = 0.1;
     this.logger = options.logger ?? defaultLogger;

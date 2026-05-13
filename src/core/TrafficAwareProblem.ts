@@ -1,5 +1,5 @@
-import type { Node, Customer, Vehicle } from './Problem.js';
-import { Problem } from './Problem.js';
+import type { LocationNode, Customer, Vehicle } from './Problem.js';
+import { VrpProblem } from './Problem.js';
 
 /**
  * Traffic data for a road segment between two nodes.
@@ -94,7 +94,7 @@ export class TrafficModel {
  * Traffic-aware problem instance.
  * Extends base Problem with real-time traffic data.
  */
-export class TrafficAwareProblem extends Problem {
+export class TrafficAwareProblem extends VrpProblem {
   /**
    * @param nodes - Available nodes by ID
    * @param customers - Customers to serve
@@ -104,7 +104,7 @@ export class TrafficAwareProblem extends Problem {
    * @param defaultSpeed - Baseline vehicle speed
    */
   constructor(
-    nodes: Readonly<Record<number, Node>>,
+    nodes: Readonly<Record<number, LocationNode>>,
     customers: ReadonlyArray<Customer>,
     vehicles: ReadonlyArray<Vehicle>,
     depotNodeId: number = 0,

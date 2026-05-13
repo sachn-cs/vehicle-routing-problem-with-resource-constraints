@@ -165,7 +165,7 @@ export const RemovalOperators = {
     const sortedCustomers = [...solution.problem.customers].sort((a, b) => {
       const aNode = solution.problem.nodes[a.deliveryNodeId];
       const bNode = solution.problem.nodes[b.deliveryNodeId];
-      if (!aNode || !bNode || !seedNode) return 0;
+      if (!aNode || !bNode) return 0;
       const distA = Math.hypot(aNode.x - seedNode.x, aNode.y - seedNode.y);
       const distB = Math.hypot(bNode.x - seedNode.x, bNode.y - seedNode.y);
       return distA - distB;

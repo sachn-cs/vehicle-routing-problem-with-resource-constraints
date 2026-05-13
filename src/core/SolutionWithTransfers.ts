@@ -1,15 +1,15 @@
-import { Problem } from './Problem.js';
-import type { Customer, Node } from './Problem.js';
+import { VrpProblem } from './Problem.js';
+import type { Customer, LocationNode } from './Problem.js';
 import { TransferManager } from './ResourceTransfer.js';
 import type { ResourceTransfer , TransferHub } from './ResourceTransfer.js';
-import { Solution } from './Solution.js';
+import { VrpSolution } from './Solution.js';
 import type { Route } from './Solution.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from './VehicleWithCapabilities.js';
 
 /**
  * Extended solution with inter-vehicle resource transfers.
  */
-export class SolutionWithTransfers extends Solution {
+export class SolutionWithTransfers extends VrpSolution {
   public readonly transferManager: TransferManager;
   public readonly fleetManager: VehicleFleetManager;
   public transfers: ResourceTransfer[] = [];
@@ -21,7 +21,7 @@ export class SolutionWithTransfers extends Solution {
    * @param vehicles - Fleet vehicles with transfer capabilities
    */
   constructor(
-    problem: Problem,
+    problem: VrpProblem,
     routes: Route[] = [],
     transferHubs: TransferHub[] = [],
     vehicles: VehicleWithCapabilities[] = [],
@@ -285,7 +285,7 @@ export class SolutionWithTransfers extends Solution {
 /**
  * Problem instance with transfer hub support.
  */
-export class ProblemWithTransfers extends Problem {
+export class ProblemWithTransfers extends VrpProblem {
   /**
    * @param nodes - Available nodes by ID
    * @param customers - Customers to serve
@@ -294,7 +294,7 @@ export class ProblemWithTransfers extends Problem {
    * @param transferHubs - Hubs where vehicles exchange resources
    */
   constructor(
-    nodes: Readonly<Record<number, Node>>,
+    nodes: Readonly<Record<number, LocationNode>>,
     customers: ReadonlyArray<Customer>,
     vehicles: ReadonlyArray<VehicleWithCapabilities>,
     depotNodeId: number = 0,

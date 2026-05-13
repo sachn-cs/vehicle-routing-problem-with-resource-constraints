@@ -17,7 +17,7 @@ export interface BRKGAOptions {
   logger?: Logger;
 }
 
-interface Individual {
+export interface Individual {
   chromosome: Chromosome;
   fitness: number | null;
   solution: VrpSolution | null;
@@ -176,7 +176,7 @@ export class BRKGA {
       population = nextPopulation;
 
       // Progress logging for long runs (every 1000 generations)
-      if (g % 10 === 0 && bestIndividual) {
+      if (g % 10 === 0) {
         this.logger.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
       }
     }
@@ -232,10 +232,10 @@ export class BRKGA {
     const n = this.chromosomeSize;
     const child: Individual = {
       chromosome: {
-        priorities: new Array(n),
-        assignments: new Array(n),
-        dependencies: new Array(n),
-        transfers: new Array(n),
+        priorities: new Array<number>(n),
+        assignments: new Array<number>(n),
+        dependencies: new Array<number>(n),
+        transfers: new Array<number>(n),
       },
       fitness: null,
       solution: null,

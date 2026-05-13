@@ -3,7 +3,9 @@ export { VrpProblem, LocationNode, Customer, CustomerWithTimeWindows, Vehicle } 
 export { VrpSolution, Route } from './core/Solution.js';
 
 // Backward-compatible aliases
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export { Problem, Node } from './core/Problem.js';
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export { Solution } from './core/Solution.js';
 
 // Errors
@@ -37,7 +39,10 @@ export {
 
 // Algorithms
 export { ALNS } from './algorithms/alns/ALNS.js';
+export type { ALNSOptions } from './algorithms/alns/ALNS.js';
 export { BRKGA } from './algorithms/brkga/BRKGA.js';
+export type { BRKGAOptions, Individual } from './algorithms/brkga/BRKGA.js';
+export type { Chromosome } from './algorithms/brkga/Decoder.js';
 export { TransferAwareInsertionOperators, TransferAwareRemovalOperators } from './algorithms/alns/TransferAwareOperators.js';
 
 // Analytics
@@ -63,8 +68,8 @@ import { ALNS } from './algorithms/alns/ALNS.js';
 import type { ALNSOptions } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
 import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
-import type { Problem } from './core/Problem.js';
-import { Solution, Route } from './core/Solution.js';
+import type { VrpProblem } from './core/Problem.js';
+import { VrpSolution, Route } from './core/Solution.js';
 import { AlgorithmConvergenceError } from './errors.js';
 import type { Logger } from './logger.js';
 import { defaultLogger } from './logger.js';
@@ -106,7 +111,7 @@ export class VrpRpdSolver {
    * @param problem - VRP-RPD problem instance to solve
    */
   constructor(
-    protected readonly problem: Problem,
+    protected readonly problem: VrpProblem,
     options?: { logger?: Logger },
   ) {
     this.logger = options?.logger ?? defaultLogger;
@@ -116,7 +121,7 @@ export class VrpRpdSolver {
    * @param options - Solver configuration
    * @returns Best solution found across both stages
    */
-  async solve(options: SolveOptions = {}): Promise<Solution> {
+  async solve(options: SolveOptions = {}): Promise<VrpSolution> {
     if (options.parallel) {
       return this.solveParallel(options);
     }
@@ -147,7 +152,7 @@ export class VrpRpdSolver {
     return alnsSolution.makespan < brkgaSolution.makespan ? alnsSolution : brkgaSolution;
   }
 
-  protected async solveParallel(options: SolveOptions = {}): Promise<Solution> {
+  protected async solveParallel(options: SolveOptions = {}): Promise<VrpSolution> {
     this.logger.log('Starting Parallel Solving (ALNS + BRKGA)...');
 
     const workerPromises = [
@@ -173,7 +178,7 @@ export class VrpRpdSolver {
     if (!best) {
       throw new AlgorithmConvergenceError('No solution returned from workers');
     }
-    const solution = new Solution(
+    const solution = new VrpSolution(
       this.problem,
       best.routes.map(r => new Route(r.vehicleId, r.nodes)),
     );
@@ -200,7 +205,8 @@ export class VrpRpdSolver {
           settled = true;
           worker.terminate().catch(() => {});
           if (msg && typeof msg === 'object' && 'error' in msg) {
-            reject(new AlgorithmConvergenceError(`Worker ${type} failed: ${String(msg.error)}`));
+            const errorMsg = (msg as Record<string, unknown>)['error'];
+            reject(new AlgorithmConvergenceError(`Worker ${type} failed: ${String(errorMsg)}`));
           } else {
             resolveResult(msg as WorkerResult);
           }

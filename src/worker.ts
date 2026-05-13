@@ -2,8 +2,8 @@ import { workerData, parentPort } from 'worker_threads';
 
 import { ALNS } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
-import { Problem, Node, Customer, Vehicle } from './core/Problem.js';
-import type { Solution } from './core/Solution.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from './core/Problem.js';
+import type { VrpSolution } from './core/Solution.js';
 import { isWorkerData, validateWorkerData } from './workerValidation.js';
 
 interface WorkerResult {
@@ -32,9 +32,9 @@ if (validationError) {
 const data = workerData;
 
 // Reconstruct problem from serialized data
-const nodes: Record<number, Node> = {};
+const nodes: Record<number, LocationNode> = {};
 for (const [id, nodeData] of Object.entries(data.nodes)) {
-  nodes[Number(id)] = new Node(nodeData.id, nodeData.x, nodeData.y, nodeData.name);
+  nodes[Number(id)] = new LocationNode(nodeData.id, nodeData.x, nodeData.y, nodeData.name);
 }
 
 const customers = data.customers.map(
@@ -43,10 +43,10 @@ const customers = data.customers.map(
 
 const vehicles = data.vehicles.map(v => new Vehicle(v.id, v.capacity));
 
-const problem = new Problem(nodes, customers, vehicles, data.depotNodeId);
+const problem = new VrpProblem(nodes, customers, vehicles, data.depotNodeId);
 
 try {
-  let solution: Solution;
+  let solution: VrpSolution;
 
   if (data.type === 'ALNS') {
     const alns = new ALNS(problem, data.options);
