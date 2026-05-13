@@ -1,5 +1,5 @@
-import type { Problem } from '../core/Problem.js';
-import type { Solution } from '../core/Solution.js';
+import type { VrpProblem } from '../core/Problem.js';
+import type { VrpSolution } from '../core/Solution.js';
 
 import { RouteAnalytics } from './RouteAnalytics.js';
 
@@ -36,8 +36,8 @@ export class SolutionComparator {
    * @param problem - Problem instance the solutions solve
    */
   constructor(
-    private readonly solutions: Solution[],
-    private readonly problem: Problem,
+    private readonly solutions: VrpSolution[],
+    private readonly problem: VrpProblem,
   ) {}
 
   /**

@@ -1,5 +1,5 @@
-import type { Problem } from '../core/Problem.js';
-import type { Solution } from '../core/Solution.js';
+import type { VrpProblem } from '../core/Problem.js';
+import type { VrpSolution } from '../core/Solution.js';
 
 export interface GeoJSONFeature {
   type: 'Feature';
@@ -36,8 +36,8 @@ export class GISExporter {
    * @param coordinateTransform - Optional function to convert problem coordinates
    */
   constructor(
-    private readonly solution: Solution,
-    private readonly problem: Problem,
+    private readonly solution: VrpSolution,
+    private readonly problem: VrpProblem,
     private readonly coordinateTransform?: (x: number, y: number) => [number, number],
   ) {}
 

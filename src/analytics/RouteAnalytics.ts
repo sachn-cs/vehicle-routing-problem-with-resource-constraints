@@ -1,5 +1,5 @@
-import type { Problem, CustomerWithTimeWindows } from '../core/Problem.js';
-import type { Solution } from '../core/Solution.js';
+import type { VrpProblem, CustomerWithTimeWindows } from '../core/Problem.js';
+import type { VrpSolution } from '../core/Solution.js';
 
 export interface VehicleUtilization {
   vehicleId: number;
@@ -42,7 +42,7 @@ export class RouteAnalytics {
    * @param solution - Solution to analyze
    * @param problem - Problem instance the solution solves
    */
-  constructor(private readonly solution: Solution, private readonly problem: Problem) {}
+  constructor(private readonly solution: VrpSolution, private readonly problem: VrpProblem) {}
 
   /**
    * @returns Per-route vehicle utilization metrics

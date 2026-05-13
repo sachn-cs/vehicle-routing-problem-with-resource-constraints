@@ -1,4 +1,4 @@
-import type { Node, Customer, Vehicle } from './Problem.js';
+import type { LocationNode, Customer, Vehicle } from './Problem.js';
 
 /**
  * Represents a depot where vehicles can start and end their routes.
@@ -33,7 +33,7 @@ export class MultiDepotProblem {
    * @param vehicleDepotAssignments - Map of vehicleId -> depotId
    */
   constructor(
-    public readonly nodes: Readonly<Record<number, Node>>,
+    public readonly nodes: Readonly<Record<number, LocationNode>>,
     public readonly customers: ReadonlyArray<Customer>,
     public readonly vehicles: ReadonlyArray<Vehicle>,
     public readonly depots: ReadonlyArray<Depot>,
