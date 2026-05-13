@@ -166,7 +166,7 @@ describe('T5 - Safe indexed access in algorithms', () => {
     expect(idx).to.be.at.most(2);
   });
 
-  it('BRKGA returns complete solution even with tiny population', () => {
+  it('BRKGA returns complete solution even with tiny population', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -177,7 +177,7 @@ describe('T5 - Safe indexed access in algorithms', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 3, maxGenerations: 3 });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     expect(solution.isComplete()).to.be.true;
     expect(solution.isFeasible()).to.be.true;

@@ -131,8 +131,11 @@ export class BRKGA {
   /**
    * @returns Best solution found after convergence or max generations
    */
-  solve(): VrpSolution {
+  async solve(): Promise<VrpSolution> {
     const startTime = Date.now();
+    if (this.islands > 1) {
+      return this.solveIslands(startTime);
+    }
     let population = this.initializePopulation();
     let bestIndividual: Individual | null = null;
     let generationsWithoutImprovement = 0;
@@ -185,38 +188,7 @@ export class BRKGA {
         break;
       }
 
-      // Evolve
-      const nextPopulation: Individual[] = [];
-
-      // Elite preservation
-      const eliteCount = Math.floor(this.populationSize * this.eliteFraction);
-      for (let i = 0; i < eliteCount; i++) {
-        const elite = population[i];
-        if (elite) {
-          nextPopulation.push({ ...elite });
-        }
-      }
-
-      // Mutants (random individuals)
-      const mutantCount = Math.floor(this.populationSize * this.mutantFraction);
-      for (let i = 0; i < mutantCount; i++) {
-        nextPopulation.push(this.randomIndividual());
-      }
-
-      // Crossover (biased: always one elite parent)
-      const crossoverCount = this.populationSize - nextPopulation.length;
-      for (let i = 0; i < crossoverCount; i++) {
-        const eliteParent = population[Math.floor(Math.random() * eliteCount)];
-        const nonEliteParent =
-          population[
-            eliteCount + Math.floor(Math.random() * (this.populationSize - eliteCount))
-          ];
-        if (eliteParent && nonEliteParent) {
-          nextPopulation.push(this.crossover(eliteParent, nonEliteParent));
-        }
-      }
-
-      population = nextPopulation;
+      population = this.evolvePopulation(population);
 
       // Progress callback every 100 generations
       if (this.onProgress && g % 100 === 0) {
@@ -311,6 +283,54 @@ export class BRKGA {
     }
 
     return child;
+  }
+
+  /**
+   * Evolves one generation of the population.
+   * @param population - Current population (already evaluated and sorted)
+   * @returns Next generation population
+   */
+  evolvePopulation(population: Individual[]): Individual[] {
+    const nextPopulation: Individual[] = [];
+
+    // Elite preservation
+    const eliteCount = Math.floor(this.populationSize * this.eliteFraction);
+    for (let i = 0; i < eliteCount; i++) {
+      const elite = population[i];
+      if (elite) {
+        nextPopulation.push({ ...elite });
+      }
+    }
+
+    // Mutants (random individuals)
+    const mutantCount = Math.floor(this.populationSize * this.mutantFraction);
+    for (let i = 0; i < mutantCount; i++) {
+      nextPopulation.push(this.randomIndividual());
+    }
+
+    // Crossover (biased: always one elite parent)
+    const crossoverCount = this.populationSize - nextPopulation.length;
+    for (let i = 0; i < crossoverCount; i++) {
+      const eliteParent = population[Math.floor(Math.random() * eliteCount)];
+      const nonEliteParent =
+        population[
+          eliteCount + Math.floor(Math.random() * (this.populationSize - eliteCount))
+        ];
+      if (eliteParent && nonEliteParent) {
+        nextPopulation.push(this.crossover(eliteParent, nonEliteParent));
+      }
+    }
+
+    return nextPopulation;
+  }
+
+  /**
+   * Solves using multiple island populations in parallel.
+   * Stub: full implementation deferred to later tasks.
+   */
+  protected async solveIslands(_startTime: number): Promise<VrpSolution> {
+    this.logger.log(`Island-model BRKGA not yet implemented (requested ${this.islands} islands)`);
+    return this.decoder.decode(this.randomIndividual().chromosome);
   }
 
   /**

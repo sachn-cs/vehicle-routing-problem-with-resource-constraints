@@ -38,7 +38,7 @@ describe('Algorithm Correctness', () => {
     expect(stats.insertionWeights.every(w => w > 0)).to.be.true;
   });
 
-  it('BRKGA warm-start roundtrip preserves feasibility', () => {
+  it('BRKGA warm-start roundtrip preserves feasibility', async () => {
     const problem = makeProblem();
     const alns = new ALNS(problem, { maxIterations: 10 });
     const initial = alns.generateInitialSolution();
@@ -48,26 +48,26 @@ describe('Algorithm Correctness', () => {
       maxGenerations: 5,
       warmStartSolution: initial,
     });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     expect(solution.isFeasible()).to.be.true;
     expect(solution.isComplete()).to.be.true;
     expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  it('BRKGA with tiny population still returns complete solution', () => {
+  it('BRKGA with tiny population still returns complete solution', async () => {
     const problem = makeProblem();
     const brkga = new BRKGA(problem, { populationSize: 2, maxGenerations: 2 });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     expect(solution.isComplete()).to.be.true;
     expect(solution.makespan).to.be.greaterThan(0);
   });
 
-  it('Decoder produces complete solution', () => {
+  it('Decoder produces complete solution', async () => {
     const problem = makeProblem();
     const brkga = new BRKGA(problem, { populationSize: 5, maxGenerations: 3 });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     expect(solution.isComplete()).to.be.true;
     expect(solution.checkCapacity()).to.be.true;

@@ -193,7 +193,7 @@ export class VrpRpdSolver {
           }
         : undefined,
     });
-    const brkgaSolution = brkga.solve();
+    const brkgaSolution = await brkga.solve();
     this.logger.log(`BRKGA completed. Best makespan: ${brkgaSolution.makespan.toFixed(2)}`);
 
     // Return best of both stages

@@ -33,9 +33,9 @@ describe('Smoke Tests', () => {
     expect(alnsSolution.makespan).to.be.greaterThan(0);
   });
 
-  it('BRKGA solve', () => {
+  it('BRKGA solve', async () => {
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
-    const brkgaSolution = brkga.solve();
+    const brkgaSolution = await brkga.solve();
     expect(brkgaSolution.isComplete()).to.be.true;
     expect(brkgaSolution.makespan).to.be.greaterThan(0);
   });

@@ -131,7 +131,7 @@ describe('ALNS', () => {
 });
 
 describe('BRKGA', () => {
-  it('should solve a small problem', () => {
+  it('should solve a small problem', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -144,7 +144,7 @@ describe('BRKGA', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     expect(solution.isFeasible()).to.be.true;
     expect(solution.isComplete()).to.be.true;

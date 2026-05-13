@@ -45,25 +45,27 @@ const vehicles = data.vehicles.map(v => new Vehicle(v.id, v.capacity));
 
 const problem = new VrpProblem(nodes, customers, vehicles, data.depotNodeId);
 
-try {
-  let solution: VrpSolution;
+(async () => {
+  try {
+    let solution: VrpSolution;
 
-  if (data.type === 'ALNS') {
-    const alns = new ALNS(problem, data.options);
-    solution = alns.solve();
-  } else {
-    const brkga = new BRKGA(problem, data.options);
-    solution = brkga.solve();
+    if (data.type === 'ALNS') {
+      const alns = new ALNS(problem, data.options);
+      solution = alns.solve();
+    } else {
+      const brkga = new BRKGA(problem, data.options);
+      solution = await brkga.solve();
+    }
+
+    const result: WorkerResult = {
+      makespan: solution.makespan,
+      routes: solution.routes.map(r => ({ vehicleId: r.vehicleId, nodes: r.nodes })),
+      type: data.type,
+    };
+
+    parentPort?.postMessage(result);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    parentPort?.postMessage({ error: errorMessage, type: data.type });
   }
-
-  const result: WorkerResult = {
-    makespan: solution.makespan,
-    routes: solution.routes.map(r => ({ vehicleId: r.vehicleId, nodes: r.nodes })),
-    type: data.type,
-  };
-
-  parentPort?.postMessage(result);
-} catch (err) {
-  const errorMessage = err instanceof Error ? err.message : String(err);
-  parentPort?.postMessage({ error: errorMessage, type: data.type });
-}
+})();

@@ -202,7 +202,7 @@ describe('C4 - Directed transfer capability check', () => {
 // C5: BRKGA best solution must not be corrupted by evolution
 // ============================================================
 describe('C5 - BRKGA best-solution immutability', () => {
-  it('returned solution remains feasible after solve', () => {
+  it('returned solution remains feasible after solve', async () => {
     const nodes: Record<number, LocationNode> = {
       0: new LocationNode(0, 0, 0, 'Depot'),
       1: new LocationNode(1, 10, 0, 'D1'),
@@ -218,7 +218,7 @@ describe('C5 - BRKGA best-solution immutability', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 20, maxGenerations: 20 });
-    const solution = brkga.solve();
+    const solution = await brkga.solve();
 
     // Solution must not have been mutated into an invalid state
     expect(solution.isComplete()).to.be.true;
@@ -228,7 +228,7 @@ describe('C5 - BRKGA best-solution immutability', () => {
     // Verify route arrays are independent (not shared with internal state)
     const routesCopy = solution.routes.map(r => [...r.nodes]);
     // Run solve again; previous solution should be unaffected
-    const solution2 = brkga.solve();
+    const solution2 = await brkga.solve();
     expect(solution2.routes).to.not.equal(solution.routes);
     expect(solution.routes.map(r => [...r.nodes])).to.deep.equal(routesCopy);
   });
