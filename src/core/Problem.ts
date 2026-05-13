@@ -92,7 +92,7 @@ export class VrpProblem {
   public readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
 
   constructor(
-    public readonly nodes: Readonly<Record<number, Node>>,
+    public readonly nodes: Readonly<Record<number, LocationNode>>,
     public readonly customers: ReadonlyArray<Customer>,
     public readonly vehicles: ReadonlyArray<Vehicle>,
     public readonly depotNodeId: number = 0,
