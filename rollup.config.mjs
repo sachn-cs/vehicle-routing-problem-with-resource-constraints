@@ -15,13 +15,13 @@ const config = [
         declarationMap: false,
       }),
     ],
-    external: [/node_modules/],
+    external: (id) => !id.startsWith('.') && !id.startsWith('/'),
   },
   {
     input: 'src/index.ts',
     output: { file: 'dist/index.d.ts', format: 'esm' },
     plugins: [dts()],
-    external: [/node_modules/],
+    external: (id) => !id.startsWith('.') && !id.startsWith('/'),
   },
 ];
 

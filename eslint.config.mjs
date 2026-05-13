@@ -1,14 +1,19 @@
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import tseslint from 'typescript-eslint';
 import importPlugin from 'eslint-plugin-import';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
   tseslint.configs.recommendedTypeChecked,
   tseslint.configs.strictTypeChecked,
   {
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {
