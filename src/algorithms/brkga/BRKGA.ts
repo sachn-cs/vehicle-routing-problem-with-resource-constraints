@@ -1,6 +1,7 @@
 import { Decoder, type Chromosome } from './Decoder.js';
 import { Solution } from '../../core/Solution.js';
 import type { Problem } from '../../core/Problem.js';
+import { ValidationError } from '../../errors.js';
 
 export interface BRKGAOptions {
   populationSize?: number;
@@ -52,22 +53,22 @@ export class BRKGA {
 
     // Validate options
     if (options.populationSize !== undefined && options.populationSize < 1) {
-      throw new Error('Population size must be a positive integer');
+      throw new ValidationError('Population size must be a positive integer');
     }
     if (options.eliteFraction !== undefined && (options.eliteFraction <= 0 || options.eliteFraction >= 1)) {
-      throw new Error('Elite fraction must be between 0 and 1 (exclusive)');
+      throw new ValidationError('Elite fraction must be between 0 and 1 (exclusive)');
     }
     if (options.mutantFraction !== undefined && (options.mutantFraction <= 0 || options.mutantFraction >= 1)) {
-      throw new Error('Mutant fraction must be between 0 and 1 (exclusive)');
+      throw new ValidationError('Mutant fraction must be between 0 and 1 (exclusive)');
     }
     if (options.crossoverProb !== undefined && (options.crossoverProb < 0 || options.crossoverProb > 1)) {
-      throw new Error('Crossover probability must be between 0 and 1');
+      throw new ValidationError('Crossover probability must be between 0 and 1');
     }
     if (options.maxGenerations !== undefined && options.maxGenerations < 1) {
-      throw new Error('Max generations must be a positive integer');
+      throw new ValidationError('Max generations must be a positive integer');
     }
     if (options.warmStartProportion !== undefined && (options.warmStartProportion <= 0 || options.warmStartProportion >= 1)) {
-      throw new Error('Warm-start proportion must be between 0 and 1 (exclusive)');
+      throw new ValidationError('Warm-start proportion must be between 0 and 1 (exclusive)');
     }
 
     // Practical library defaults (paper spec: 30,000 pop / 20,000 gen)

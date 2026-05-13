@@ -1,3 +1,4 @@
+import { ValidationError } from '../errors.js';
 import type { VrpProblem, Customer, CustomerWithTimeWindows } from './Problem.js';
 
 /**

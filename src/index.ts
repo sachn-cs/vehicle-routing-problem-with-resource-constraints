@@ -64,6 +64,7 @@ import { Worker } from 'worker_threads';
 import { resolve } from 'path';
 import type { ALNSOptions } from './algorithms/alns/ALNS.js';
 import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
+import { AlgorithmConvergenceError } from './errors.js';
 
 // Worker path resolution
 const getWorkerPath = (): string => {
@@ -159,7 +160,7 @@ export class VrpRpdSolver {
 
     const best = results[0];
     if (!best) {
-      throw new Error('No solution returned from workers');
+      throw new AlgorithmConvergenceError('No solution returned from workers');
     }
     const solution = new Solution(
       this.problem,
@@ -188,7 +189,7 @@ export class VrpRpdSolver {
           settled = true;
           worker.terminate().catch(() => {});
           if (msg && typeof msg === 'object' && 'error' in msg) {
-            reject(new Error(`Worker ${type} failed: ${String(msg.error)}`));
+            reject(new AlgorithmConvergenceError(`Worker ${type} failed: ${String(msg.error)}`));
           } else {
             resolveResult(msg as WorkerResult);
           }
@@ -206,9 +207,9 @@ export class VrpRpdSolver {
           settled = true;
           worker.terminate().catch(() => {});
           if (code !== 0) {
-            reject(new Error(`Worker stopped with exit code ${code}`));
+            reject(new AlgorithmConvergenceError(`Worker stopped with exit code ${code}`));
           } else {
-            reject(new Error('Worker exited without producing a result'));
+            reject(new AlgorithmConvergenceError('Worker exited without producing a result'));
           }
         }
       });

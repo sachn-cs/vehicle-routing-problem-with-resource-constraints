@@ -1,6 +1,7 @@
 import { Solution, Route } from '../../core/Solution.js';
 import { RemovalOperators, InsertionOperators } from './operators.js';
 import type { Problem } from '../../core/Problem.js';
+import { ValidationError } from '../../errors.js';
 
 export interface ALNSOptions {
   maxIterations?: number;
@@ -54,16 +55,16 @@ export class ALNS {
 
     // Validate options
     if (options.maxIterations !== undefined && options.maxIterations < 1) {
-      throw new Error('Max iterations must be a positive integer');
+      throw new ValidationError('Max iterations must be a positive integer');
     }
     if (options.coolingRate !== undefined && (options.coolingRate <= 0 || options.coolingRate >= 1)) {
-      throw new Error('Cooling rate must be between 0 and 1 (exclusive)');
+      throw new ValidationError('Cooling rate must be between 0 and 1 (exclusive)');
     }
     if (options.initialTemp !== undefined && options.initialTemp <= 0) {
-      throw new Error('Initial temperature must be positive');
+      throw new ValidationError('Initial temperature must be positive');
     }
     if (options.segmentSize !== undefined && options.segmentSize < 1) {
-      throw new Error('Segment size must be a positive integer');
+      throw new ValidationError('Segment size must be a positive integer');
     }
 
     // Paper defaults: cooling rate 0.9998, scores (33, 9, 13)

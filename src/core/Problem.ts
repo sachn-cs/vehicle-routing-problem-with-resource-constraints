@@ -1,3 +1,5 @@
+import { ValidationError } from '../errors.js';
+
 /**
  * Represents a coordinate or location in the VRP problem.
  */
@@ -100,59 +102,59 @@ export class VrpProblem {
     // Input validation
     const nodeEntries = Object.entries(nodes);
     if (nodeEntries.length === 0) {
-      throw new Error('Problem nodes cannot be empty');
+      throw new ValidationError('Problem nodes cannot be empty');
     }
     if (customers.length === 0) {
-      throw new Error('Problem customers cannot be empty');
+      throw new ValidationError('Problem customers cannot be empty');
     }
     if (vehicles.length === 0) {
-      throw new Error('Problem vehicles cannot be empty');
+      throw new ValidationError('Problem vehicles cannot be empty');
     }
 
     for (const [, node] of nodeEntries) {
       if (!node) continue;
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
-        throw new Error(`Node ${node.id} has invalid coordinates: x=${node.x}, y=${node.y}`);
+        throw new ValidationError(`Node ${node.id} has invalid coordinates: x=${node.x}, y=${node.y}`);
       }
       if (node.x < 0 || node.y < 0) {
-        throw new Error(`Node ${node.id} has negative coordinates: x=${node.x}, y=${node.y}`);
+        throw new ValidationError(`Node ${node.id} has negative coordinates: x=${node.x}, y=${node.y}`);
       }
     }
 
     const customerIds = new Set<number>();
     for (const customer of customers) {
       if (customerIds.has(customer.id)) {
-        throw new Error(`Duplicate customer ID: ${customer.id}`);
+        throw new ValidationError(`Duplicate customer ID: ${customer.id}`);
       }
       customerIds.add(customer.id);
       if (!nodes[customer.deliveryNodeId]) {
-        throw new Error(
+        throw new ValidationError(
           `Customer ${customer.id} references non-existent delivery node ${customer.deliveryNodeId}`,
         );
       }
       if (!nodes[customer.pickupNodeId]) {
-        throw new Error(
+        throw new ValidationError(
           `Customer ${customer.id} references non-existent pickup node ${customer.pickupNodeId}`,
         );
       }
       if (customer.processingTime < 0) {
-        throw new Error(`Customer ${customer.id} has negative processingTime: ${customer.processingTime}`);
+        throw new ValidationError(`Customer ${customer.id} has negative processingTime: ${customer.processingTime}`);
       }
     }
 
     const vehicleIds = new Set<number>();
     for (const vehicle of vehicles) {
       if (vehicleIds.has(vehicle.id)) {
-        throw new Error(`Duplicate vehicle ID: ${vehicle.id}`);
+        throw new ValidationError(`Duplicate vehicle ID: ${vehicle.id}`);
       }
       vehicleIds.add(vehicle.id);
       if (vehicle.capacity <= 0) {
-        throw new Error(`Vehicle ${vehicle.id} must have positive capacity, got ${vehicle.capacity}`);
+        throw new ValidationError(`Vehicle ${vehicle.id} must have positive capacity, got ${vehicle.capacity}`);
       }
     }
 
     if (!nodes[depotNodeId]) {
-      throw new Error(`Depot node ${depotNodeId} does not exist in nodes`);
+      throw new ValidationError(`Depot node ${depotNodeId} does not exist in nodes`);
     }
 
     // Build O(1) lookup indexes
