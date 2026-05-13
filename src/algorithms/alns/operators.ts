@@ -6,11 +6,21 @@ function removeCustomerFromRoutes(solution: Solution, customer: Customer): boole
   for (const route of solution.routes) {
     const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
     const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-    if (dIndex !== -1) {
+
+    if (dIndex !== -1 && pIndex !== -1) {
+      // Remove higher index first to avoid shifting
+      if (dIndex > pIndex) {
+        route.nodes.splice(dIndex, 1);
+        route.nodes.splice(pIndex, 1);
+      } else {
+        route.nodes.splice(pIndex, 1);
+        route.nodes.splice(dIndex, 1);
+      }
+      removedAny = true;
+    } else if (dIndex !== -1) {
       route.nodes.splice(dIndex, 1);
       removedAny = true;
-    }
-    if (pIndex !== -1) {
+    } else if (pIndex !== -1) {
       route.nodes.splice(pIndex, 1);
     }
   }
