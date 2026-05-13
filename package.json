@@ -25,31 +25,25 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "demo": "npx vite demo",
-    "clean": "rm -rf dist docs/api",
+    "clean": "rm -rf dist docs/api docs/md",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules npx jest --watch",
-    "test:coverage": "c8 npm test",
+    "test": "mocha",
+    "test:watch": "mocha --watch",
+    "test:coverage": "c8 mocha",
     "docs": "typedoc",
+    "docs:md": "typedoc --plugin typedoc-plugin-markdown --out docs/md",
     "typecheck": "tsc --noEmit"
   },
   "c8": {
-    "reporter": [
-      "text",
-      "lcov"
-    ],
-    "exclude": [
-      "tests/**",
-      "dist/**",
-      "demo/**",
-      "src/**/*.d.ts"
-    ],
-    "lines": 70,
-    "functions": 75,
-    "branches": 70,
-    "statements": 70
+    "reporter": ["text", "lcov", "html"],
+    "include": ["src/**/*.ts"],
+    "exclude": ["src/**/*.d.ts", "src/**/*.test.ts", "tests/**", "dist/**", "demo/**"],
+    "check-coverage": true,
+    "lines": 80,
+    "functions": 80,
+    "branches": 75,
+    "statements": 80
   },
   "keywords": [
     "vrp",
