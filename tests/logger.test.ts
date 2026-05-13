@@ -15,7 +15,7 @@ describe('Logger Injection', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const alns = new ALNS(problem, { maxIterations: 1, logger });
-    expect(() => alns.solve()).not.to.throw();
+    expect(() => alns.solve()).to.not.throw();
   });
 
   it('default logger is silent', () => {
@@ -26,6 +26,6 @@ describe('Logger Injection', () => {
 
     // Should not throw or log anything
     const alns = new ALNS(problem, { maxIterations: 1 });
-    expect(() => alns.solve()).not.to.throw();
+    expect(() => alns.solve()).to.not.throw();
   });
 });
