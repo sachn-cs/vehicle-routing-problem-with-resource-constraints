@@ -174,40 +174,41 @@ export class ALNS {
     return bestSolution;
   }
 
+  private updateSingleWeights(
+    weights: number[],
+    scores: number[],
+    usage: number[],
+  ): void {
+    for (let i = 0; i < weights.length; i++) {
+      const usageVal = usage[i];
+      const scoreVal = scores[i];
+      const weightVal = weights[i];
+      if (usageVal === undefined || usageVal <= 0 || scoreVal === undefined || weightVal === undefined) {
+        continue;
+      }
+      const avgScore = scoreVal / usageVal;
+      weights[i] = (1 - this.lambda) * weightVal + this.lambda * avgScore;
+      scores[i] = 0;
+      usage[i] = 0;
+    }
+  }
+
   protected updateWeights(): void {
-    for (let i = 0; i < this.removalWeights.length; i++) {
-      const usageVal = this.usage.removal[i];
-      const scoreVal = this.scores.removal[i];
-      const weightVal = this.removalWeights[i];
-      if (usageVal !== undefined && usageVal > 0 && scoreVal !== undefined && weightVal !== undefined) {
-        const avgScore = scoreVal / usageVal;
-        this.removalWeights[i] = (1 - this.lambda) * weightVal + this.lambda * avgScore;
-        this.scores.removal[i] = 0;
-        this.usage.removal[i] = 0;
-      }
-    }
-    for (let i = 0; i < this.insertionWeights.length; i++) {
-      const usageVal = this.usage.insertion[i];
-      const scoreVal = this.scores.insertion[i];
-      const weightVal = this.insertionWeights[i];
-      if (usageVal !== undefined && usageVal > 0 && scoreVal !== undefined && weightVal !== undefined) {
-        const avgScore = scoreVal / usageVal;
-        this.insertionWeights[i] = (1 - this.lambda) * weightVal + this.lambda * avgScore;
-        this.scores.insertion[i] = 0;
-        this.usage.insertion[i] = 0;
-      }
-    }
+    this.updateSingleWeights(this.removalWeights, this.scores.removal, this.usage.removal);
+    this.updateSingleWeights(this.insertionWeights, this.scores.insertion, this.usage.insertion);
   }
 
   protected selectOperator(weights: number[]): number {
     const sum = weights.reduce((a, b) => a + b, 0);
-    if (sum <= 0) {
+    if (sum <= 0 || !Number.isFinite(sum)) {
       return Math.floor(Math.random() * weights.length);
     }
-    let r = Math.random() * sum;
+
+    const r = Math.random() * sum;
+    let cumulative = 0;
     for (let i = 0; i < weights.length; i++) {
-      r -= weights[i]!;
-      if (r <= 0) return i;
+      cumulative += weights[i]!;
+      if (r <= cumulative) return i;
     }
     return weights.length - 1;
   }
