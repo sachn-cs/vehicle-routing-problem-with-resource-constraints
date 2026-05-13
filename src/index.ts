@@ -1,5 +1,11 @@
 // Core
 export { Problem, Node, Customer, CustomerWithTimeWindows, Vehicle } from './core/Problem.js';
+
+// Errors
+export { VrpError, ValidationError, InfeasibleSolutionError, AlgorithmConvergenceError } from './errors.js';
+
+// Logger
+export { defaultLogger, type Logger } from './logger.js';
 export { Solution, Route } from './core/Solution.js';
 
 // Multi-depot support
