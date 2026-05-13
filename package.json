@@ -36,9 +36,21 @@
     "typecheck": "tsc --noEmit"
   },
   "c8": {
-    "reporter": ["text", "lcov", "html"],
-    "include": ["src/**/*.ts"],
-    "exclude": ["src/**/*.d.ts", "src/**/*.test.ts", "tests/**", "dist/**", "demo/**"],
+    "reporter": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "include": [
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "src/**/*.d.ts",
+      "src/**/*.test.ts",
+      "tests/**",
+      "dist/**",
+      "demo/**"
+    ],
     "check-coverage": true,
     "lines": 75,
     "functions": 75,
@@ -73,7 +85,7 @@
     "rollup-plugin-dts": "^6.0.0",
     "tslib": "^2.7.0",
     "tsx": "^4.21.0",
-    "typedoc": "^0.27.0",
+    "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.11.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",
