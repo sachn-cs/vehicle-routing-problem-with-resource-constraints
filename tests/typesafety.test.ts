@@ -2,9 +2,9 @@ import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
 import { RouteAnalytics } from '../src/analytics/RouteAnalytics.js';
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
 import { TransferHub } from '../src/core/ResourceTransfer.js';
-import { Solution, Route } from '../src/core/Solution.js';
+import { VrpSolution, Route } from '../src/core/Solution.js';
 import { ProblemWithTransfers } from '../src/core/SolutionWithTransfers.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
@@ -51,17 +51,17 @@ describe('T1 - ResourceType closed union', () => {
 // ============================================================
 describe('T3 - nodeTimes string key access', () => {
   test('RouteAnalytics reads depot_return string keys', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     const analytics = new RouteAnalytics(solution, problem);
@@ -72,17 +72,17 @@ describe('T3 - nodeTimes string key access', () => {
   });
 
   test('GISExporter reads depot_return string keys for GeoJSON', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -95,17 +95,17 @@ describe('T3 - nodeTimes string key access', () => {
   });
 
   test('GISExporter reads depot_return string keys for CSV', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -128,18 +128,18 @@ describe('T3 - nodeTimes string key access', () => {
 // ============================================================
 describe('T4 - ProblemWithTransfers constructor accepts Node records', () => {
   test('constructs with typed node record', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      5: new Node(5, 10, 10, 'Hub'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      5: new LocationNode(5, 10, 10, 'Hub'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new VehicleWithCapabilities(0, 10, ['standard'])];
     const hubs = [new TransferHub(5, 10, 10, 'Hub', 2, 1)];
 
     const problem = new ProblemWithTransfers(nodes, customers, vehicles, 0, hubs);
-    expect(problem.nodes[0]?.name).toBe('Depot');
+    expect(problem.nodes[0].name).toBe('Depot');
     expect(problem.isTransferHub(5)).toBe(true);
     expect(problem.isTransferHub(1)).toBe(false);
   });
@@ -150,30 +150,29 @@ describe('T4 - ProblemWithTransfers constructor accepts Node records', () => {
 // ============================================================
 describe('T5 - Safe indexed access in algorithms', () => {
   test('ALNS selectOperator handles all-zero weights without crash', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
     const solver = new ALNS(problem, { maxIterations: 2 });
 
     // Access protected method via type assertion for testing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const idx = (solver as any).selectOperator([0, 0, 0]);
+    const idx = (solver as unknown as { selectOperator: (weights: number[]) => number }).selectOperator([0, 0, 0]);
     expect(idx).toBeGreaterThanOrEqual(0);
     expect(idx).toBeLessThanOrEqual(2);
   });
 
   test('BRKGA returns complete solution even with tiny population', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 3, maxGenerations: 3 });
     const solution = brkga.solve();
@@ -183,19 +182,19 @@ describe('T5 - Safe indexed access in algorithms', () => {
   });
 
   test('regret insertion handles single route without infinite loop', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(
+    const problem = new VrpProblem(
       nodes,
       [new Customer(1, 1, 2, 50)],
       [new Vehicle(1, 10)],
       0,
     );
 
-    const empty = new Solution(problem, [new Route(1, [])]);
+    const empty = new VrpSolution(problem, [new Route(1, [])]);
     const start = Date.now();
     const solution = InsertionOperators.regret2Insertion(empty, problem.customers);
     const elapsed = Date.now() - start;

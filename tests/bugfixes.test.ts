@@ -2,10 +2,10 @@ import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
 import { TransferAwareInsertionOperators } from '../src/algorithms/alns/TransferAwareOperators.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { Problem, Node, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/Problem.js';
+import { VrpProblem, LocationNode, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/Problem.js';
 import type { ResourceTransfer } from '../src/core/ResourceTransfer.js';
 import { TransferManager, TransferHub } from '../src/core/ResourceTransfer.js';
-import { Solution, Route } from '../src/core/Solution.js';
+import { VrpSolution, Route } from '../src/core/Solution.js';
 import {
   SolutionWithTransfers,
   ProblemWithTransfers,
@@ -19,12 +19,12 @@ import { GISExporter } from '../src/export/GISExporter.js';
 // ============================================================
 describe('C1 - Cost and CO2 per-route correctness', () => {
   test('multi-vehicle cost is sum of per-route costs', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      3: new Node(3, 0, 10, 'D2'),
-      4: new Node(4, 0, 20, 'P2'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
     };
     const customers = [
       new Customer(1, 1, 2, 50),
@@ -35,12 +35,12 @@ describe('C1 - Cost and CO2 per-route correctness', () => {
       new Vehicle(1, 10, 0, 0, 2, 2),
       new Vehicle(2, 10, 0, 0, 3, 3),
     ];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     // Route 1: depot->1->2->depot = 10 + 10 + 20 = 40
     // Route 2: depot->3->4->depot = 10 + 10 + 20 = 40
     const routes = [new Route(1, [1, 2]), new Route(2, [3, 4])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     const expectedCost = 40 * 2 + 40 * 3; // 80 + 120 = 200
@@ -54,17 +54,17 @@ describe('C1 - Cost and CO2 per-route correctness', () => {
   });
 
   test('single-vehicle cost matches totalDistance * rate', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10, 0, 0, 5, 5)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     // Route distance = 10 + 10 + 20 = 40
@@ -79,19 +79,19 @@ describe('C1 - Cost and CO2 per-route correctness', () => {
 // ============================================================
 describe('C2 - Delivery time window enforcement', () => {
   test('earliestDeliveryTime pushes back arrival and ready time', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [
       new CustomerWithTimeWindows(1, 1, 2, 50, 100, 200, 160, 300),
     ];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     // Without time window, arrival at delivery would be 10.
@@ -104,19 +104,19 @@ describe('C2 - Delivery time window enforcement', () => {
   });
 
   test('latestDeliveryTime violation makes solution infeasible', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 1000, 0, 'FarD'),
-      2: new Node(2, 2000, 0, 'FarP'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 1000, 0, 'FarD'),
+      2: new LocationNode(2, 2000, 0, 'FarP'),
     };
     const customers = [
       new CustomerWithTimeWindows(1, 1, 2, 50, 0, 1, 0, 5000),
     ];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     solution.calculateSchedule();
 
     expect(solution.checkTimeWindows()).toBe(false);
@@ -129,9 +129,9 @@ describe('C2 - Delivery time window enforcement', () => {
 // ============================================================
 describe('C3 - TrafficAwareProblem distance contract', () => {
   test('getDistance returns Euclidean distance, not travel time', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 3, 4, 'A'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 3, 4, 'A'),
     };
     const customers = [new Customer(1, 1, 1, 50)];
     const vehicles = [new Vehicle(1, 10)];
@@ -201,19 +201,19 @@ describe('C4 - Directed transfer capability check', () => {
 // ============================================================
 describe('C5 - BRKGA best-solution immutability', () => {
   test('returned solution remains feasible after solve', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      3: new Node(3, 0, 10, 'D2'),
-      4: new Node(4, 0, 20, 'P2'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
     };
     const customers = [
       new Customer(1, 1, 2, 50),
       new Customer(2, 3, 4, 50),
     ];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 20, maxGenerations: 20 });
     const solution = brkga.solve();
@@ -237,13 +237,13 @@ describe('C5 - BRKGA best-solution immutability', () => {
 // ============================================================
 describe('C6 - Transfer-aware insertion registers transfers', () => {
   test('greedyInsertionWithTransfers creates transfer records', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      3: new Node(3, 0, 10, 'D2'),
-      4: new Node(4, 0, 20, 'P2'),
-      5: new Node(5, 10, 10, 'Hub'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
+      5: new LocationNode(5, 10, 10, 'Hub'),
     };
     const customers = [
       new Customer(1, 1, 2, 50),
@@ -354,12 +354,12 @@ describe('C7 - TransferManager hub concurrency limit', () => {
 // ============================================================
 describe('C8/C9 - Worker and constructor validation', () => {
   test('ALNS rejects invalid coolingRate', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
 
     expect(() => new ALNS(problem, { coolingRate: 1 })).toThrow('Cooling rate');
     expect(() => new ALNS(problem, { coolingRate: 0 })).toThrow('Cooling rate');
@@ -367,12 +367,12 @@ describe('C8/C9 - Worker and constructor validation', () => {
   });
 
   test('BRKGA rejects invalid proportions', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
 
     expect(() => new BRKGA(problem, { populationSize: 0 })).toThrow('Population size');
     expect(() => new BRKGA(problem, { eliteFraction: 1 })).toThrow('Elite fraction');
@@ -385,28 +385,27 @@ describe('C8/C9 - Worker and constructor validation', () => {
 // ============================================================
 describe('C10 - ALNS selectOperator zero-weight safety', () => {
   test('returns valid index when all weights are zero', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
     const alns = new ALNS(problem, { maxIterations: 2 });
 
     // Access protected method via type assertion for testing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const idx = (alns as any).selectOperator([0, 0, 0]);
+    const idx = (alns as unknown as { selectOperator: (weights: number[]) => number }).selectOperator([0, 0, 0]);
     expect(idx).toBeGreaterThanOrEqual(0);
     expect(idx).toBeLessThanOrEqual(2);
   });
 
   test('solve does not hang with single vehicle (regret fallback)', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
     const alns = new ALNS(problem, { maxIterations: 10 });
 
     const start = Date.now();
@@ -424,15 +423,15 @@ describe('C10 - ALNS selectOperator zero-weight safety', () => {
 // ============================================================
 describe('Security - GISExporter escaping', () => {
   test('KML output is well-formed XML without raw special chars in text nodes', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -446,15 +445,15 @@ describe('Security - GISExporter escaping', () => {
   });
 
   test('CSV does not break with commas in names', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot, Main'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot, Main'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -475,11 +474,11 @@ describe('Security - GISExporter escaping', () => {
 // ============================================================
 describe('SolutionWithTransfers validation', () => {
   test('detects incompatible vehicles', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      5: new Node(5, 10, 10, 'Hub'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      5: new LocationNode(5, 10, 10, 'Hub'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [
@@ -501,11 +500,11 @@ describe('SolutionWithTransfers validation', () => {
   });
 
   test('detects transfer amount exceeding maxTransferAmount', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      5: new Node(5, 10, 10, 'Hub'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      5: new LocationNode(5, 10, 10, 'Hub'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [
@@ -532,19 +531,19 @@ describe('SolutionWithTransfers validation', () => {
 // ============================================================
 describe('Regret insertion infinite-loop guard', () => {
   test('regret2Insertion completes with a single route', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(
+    const problem = new VrpProblem(
       nodes,
       [new Customer(1, 1, 2, 50)],
       [new Vehicle(1, 10)],
       0,
     );
 
-    const empty = new Solution(problem, [new Route(1, [])]);
+    const empty = new VrpSolution(problem, [new Route(1, [])]);
     const start = Date.now();
     const solution = InsertionOperators.regret2Insertion(empty, problem.customers);
     const elapsed = Date.now() - start;
@@ -556,19 +555,19 @@ describe('Regret insertion infinite-loop guard', () => {
   });
 
   test('regret3Insertion completes with a single route', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(
+    const problem = new VrpProblem(
       nodes,
       [new Customer(1, 1, 2, 50)],
       [new Vehicle(1, 10)],
       0,
     );
 
-    const empty = new Solution(problem, [new Route(1, [])]);
+    const empty = new VrpSolution(problem, [new Route(1, [])]);
     const start = Date.now();
     const solution = InsertionOperators.regret3Insertion(empty, problem.customers);
     const elapsed = Date.now() - start;
@@ -578,19 +577,19 @@ describe('Regret insertion infinite-loop guard', () => {
   });
 
   test('regret4Insertion completes with a single route', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(
+    const problem = new VrpProblem(
       nodes,
       [new Customer(1, 1, 2, 50)],
       [new Vehicle(1, 10)],
       0,
     );
 
-    const empty = new Solution(problem, [new Route(1, [])]);
+    const empty = new VrpSolution(problem, [new Route(1, [])]);
     const start = Date.now();
     const solution = InsertionOperators.regret4Insertion(empty, problem.customers);
     const elapsed = Date.now() - start;

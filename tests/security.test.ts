@@ -1,24 +1,23 @@
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
-import { Solution, Route } from '../src/core/Solution.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { VrpSolution, Route } from '../src/core/Solution.js';
 import { GISExporter } from '../src/export/GISExporter.js';
 import { isWorkerData, validateWorkerData } from '../src/workerValidation.js';
 
 describe('Security S1 - KML XML escaping', () => {
   test('escapeXml helper escapes all XML entities', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const escapeXml = (exporter as any).escapeXml.bind(exporter);
+    const escapeXml = (exporter as unknown as { escapeXml: (s: string) => string }).escapeXml.bind(exporter);
 
     expect(escapeXml('foo < bar')).toBe('foo &lt; bar');
     expect(escapeXml('foo > bar')).toBe('foo &gt; bar');
@@ -30,15 +29,15 @@ describe('Security S1 - KML XML escaping', () => {
   });
 
   test('KML output does not contain raw angle brackets inside text nodes', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -65,67 +64,64 @@ describe('Security S1 - KML XML escaping', () => {
 
 describe('Security S2 - CSV escaping', () => {
   test('escapeCsv wraps values containing commas in quotes', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
+    const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
     expect(escapeCsv('hello, world')).toBe('"hello, world"');
   });
 
   test('escapeCsv doubles inner quotes', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
+    const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
     expect(escapeCsv('say "hello"')).toBe('"say ""hello"""');
   });
 
   test('escapeCsv handles newlines', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    const problem = new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
+    const escapeCsv = (exporter as unknown as { escapeCsv: (s: string) => string }).escapeCsv.bind(exporter);
 
     expect(escapeCsv('line1\nline2')).toBe('"line1\nline2"');
     expect(escapeCsv('line1\rline2')).toBe('"line1\rline2"');
   });
 
   test('CSV output remains parseable with special characters', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot, Main'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot, Main'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
-    const solution = new Solution(problem, [new Route(1, [1, 2])]);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+    const solution = new VrpSolution(problem, [new Route(1, [1, 2])]);
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
@@ -142,60 +138,60 @@ describe('Security S2 - CSV escaping', () => {
 
 describe('Security S3 - Problem constructor validation', () => {
   test('rejects empty nodes', () => {
-    expect(() => new Problem({}, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('nodes cannot be empty');
+    expect(() => new VrpProblem({}, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('nodes cannot be empty');
   });
 
   test('rejects empty customers', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
     };
-    expect(() => new Problem(nodes, [], [new Vehicle(1, 10)], 0)).toThrow('customers cannot be empty');
+    expect(() => new VrpProblem(nodes, [], [new Vehicle(1, 10)], 0)).toThrow('customers cannot be empty');
   });
 
   test('rejects empty vehicles', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new Problem(nodes, [new Customer(1, 1, 2, 50)], [], 0)).toThrow('vehicles cannot be empty');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [], 0)).toThrow('vehicles cannot be empty');
   });
 
   test('rejects NaN coordinates', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, NaN, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, NaN, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
   });
 
   test('rejects Infinity coordinates', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, Infinity, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, Infinity, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('invalid coordinates');
   });
 
   test('rejects negative coordinates', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, -10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, -10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
-    expect(() => new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('negative coordinates');
+    expect(() => new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0)).toThrow('negative coordinates');
   });
 
   test('rejects duplicate customer IDs', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(
+      new VrpProblem(
         nodes,
         [new Customer(1, 1, 2, 50), new Customer(1, 1, 2, 50)],
         [new Vehicle(1, 10)],
@@ -205,13 +201,13 @@ describe('Security S3 - Problem constructor validation', () => {
   });
 
   test('rejects duplicate vehicle IDs', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(
+      new VrpProblem(
         nodes,
         [new Customer(1, 1, 2, 50)],
         [new Vehicle(1, 10), new Vehicle(1, 10)],
@@ -221,60 +217,60 @@ describe('Security S3 - Problem constructor validation', () => {
   });
 
   test('rejects customer referencing non-existent delivery node', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(nodes, [new Customer(1, 999, 2, 50)], [new Vehicle(1, 10)], 0),
+      new VrpProblem(nodes, [new Customer(1, 999, 2, 50)], [new Vehicle(1, 10)], 0),
     ).toThrow('non-existent delivery node');
   });
 
   test('rejects customer referencing non-existent pickup node', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(nodes, [new Customer(1, 1, 999, 50)], [new Vehicle(1, 10)], 0),
+      new VrpProblem(nodes, [new Customer(1, 1, 999, 50)], [new Vehicle(1, 10)], 0),
     ).toThrow('non-existent pickup node');
   });
 
   test('rejects depot node ID not present in nodes', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 999),
+      new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 999),
     ).toThrow('Depot node 999 does not exist');
   });
 
   test('rejects negative processing time', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(nodes, [new Customer(1, 1, 2, -1)], [new Vehicle(1, 10)], 0),
+      new VrpProblem(nodes, [new Customer(1, 1, 2, -1)], [new Vehicle(1, 10)], 0),
     ).toThrow('negative processingTime');
   });
 
   test('rejects zero or negative capacity', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     expect(() =>
-      new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 0)], 0),
+      new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 0)], 0),
     ).toThrow('positive capacity');
     expect(() =>
-      new Problem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, -5)], 0),
+      new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, -5)], 0),
     ).toThrow('positive capacity');
   });
 });

@@ -1,17 +1,17 @@
 import { ALNS } from '../src/algorithms/alns/ALNS';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA';
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem';
-import { Solution, Route } from '../src/core/Solution';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem';
+import { VrpSolution, Route } from '../src/core/Solution';
 
 describe('Smoke Tests', () => {
-  const nodes: Record<number, Node> = {
-    0: new Node(0, 0, 0, 'Depot'),
-    1: new Node(1, 10, 0, 'D1'),
-    2: new Node(2, 20, 0, 'P1'),
+  const nodes: Record<number, LocationNode> = {
+    0: new LocationNode(0, 0, 0, 'Depot'),
+    1: new LocationNode(1, 10, 0, 'D1'),
+    2: new LocationNode(2, 20, 0, 'P1'),
   };
   const customers = [new Customer(1, 1, 2, 50)];
   const vehicles = [new Vehicle(1, 5)];
-  const problem = new Problem(nodes, customers, vehicles, 0);
+  const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
   test('creating problem instance', () => {
     expect(problem).toBeDefined();
@@ -19,7 +19,7 @@ describe('Smoke Tests', () => {
 
   test('calculating schedule', () => {
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     const makespan = solution.calculateSchedule();
     expect(makespan).toBeGreaterThan(0);
   });
