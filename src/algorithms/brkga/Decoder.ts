@@ -98,18 +98,28 @@ export class Decoder {
    * For VRP-RPD: pickup depends on delivery + processing time.
    */
   private canScheduleCustomer(
-    _customer: Customer,
-    _scheduled: Set<number>,
-    _nodeTimes: Record<number, number>,
+    customer: Customer,
+    scheduled: ReadonlySet<number>,
+    nodeTimes: Readonly<Record<number | string, number>>,
   ): boolean {
-    // Delivery can always be scheduled (no predecessors)
-    // Pickup depends on delivery being scheduled and processed
-    // In multi-pass, we schedule D first, then P in subsequent passes
+    const customerIndex = this.problem.customers.indexOf(customer);
+    if (customerIndex < 0) return false;
 
-    // For cross-vehicle transfers, check α genes for ordering
-    // This is a simplified check - full implementation would check β genes too
+    // Prevent duplicate scheduling
+    if (scheduled.has(customerIndex)) {
+      return false;
+    }
 
-    return true; // Simplified: allow all, decoder handles timing
+    // If delivery has already been scheduled (cross-route), verify processing elapsed
+    const deliveryTime = nodeTimes[customer.deliveryNodeId];
+    if (deliveryTime !== undefined) {
+      const pickupTime = nodeTimes[customer.pickupNodeId];
+      if (pickupTime !== undefined && pickupTime < deliveryTime + customer.processingTime) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
