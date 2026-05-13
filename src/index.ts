@@ -65,6 +65,8 @@ import { resolve } from 'path';
 import type { ALNSOptions } from './algorithms/alns/ALNS.js';
 import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
 import { AlgorithmConvergenceError } from './errors.js';
+import type { Logger } from './logger.js';
+import { defaultLogger } from './logger.js';
 
 // Worker path resolution
 const getWorkerPath = (): string => {
@@ -79,6 +81,7 @@ export interface SolveOptions {
   coolingRate?: number;
   parallel?: boolean;
   warmStart?: boolean;  // Enable ALNS→BRKGA warm-start
+  logger?: Logger;
 }
 
 export interface WorkerResult {
@@ -96,10 +99,17 @@ export interface WorkerResult {
  * Paper: arXiv:2602.23685v2
  */
 export class VrpRpdSolver {
+  private readonly logger: Logger;
+
   /**
    * @param problem - VRP-RPD problem instance to solve
    */
-  constructor(protected readonly problem: Problem) {}
+  constructor(
+    protected readonly problem: Problem,
+    options?: { logger?: Logger },
+  ) {
+    this.logger = options?.logger ?? defaultLogger;
+  }
 
   /**
    * @param options - Solver configuration
@@ -111,17 +121,17 @@ export class VrpRpdSolver {
     }
 
     // Stage 1: ALNS
-    console.log('Starting Stage 1: ALNS...');
+    this.logger.log('Starting Stage 1: ALNS...');
     const alns = new ALNS(this.problem, {
       maxIterations: options.alnsIterations ?? 500,
       initialTemp: options.initialTemp ?? 100,
       coolingRate: options.coolingRate ?? 0.9998,  // Paper spec
     });
     const alnsSolution = alns.solve();
-    console.log(`ALNS completed. Best makespan: ${alnsSolution.makespan.toFixed(2)}`);
+    this.logger.log(`ALNS completed. Best makespan: ${alnsSolution.makespan.toFixed(2)}`);
 
     // Stage 2: BRKGA with warm-start from ALNS
-    console.log('Starting Stage 2: BRKGA with warm-start...');
+    this.logger.log('Starting Stage 2: BRKGA with warm-start...');
     const warmStart = options.warmStart ?? true;  // Default: enabled (paper spec)
     const brkga = new BRKGA(this.problem, {
       populationSize: options.populationSize ?? 30000,  // Paper spec
@@ -130,14 +140,14 @@ export class VrpRpdSolver {
       warmStartProportion: 0.15,  // Paper spec: 15% warm-start
     });
     const brkgaSolution = brkga.solve();
-    console.log(`BRKGA completed. Best makespan: ${brkgaSolution.makespan.toFixed(2)}`);
+    this.logger.log(`BRKGA completed. Best makespan: ${brkgaSolution.makespan.toFixed(2)}`);
 
     // Return best of both stages
     return alnsSolution.makespan < brkgaSolution.makespan ? alnsSolution : brkgaSolution;
   }
 
   protected async solveParallel(options: SolveOptions = {}): Promise<Solution> {
-    console.log('Starting Parallel Solving (ALNS + BRKGA)...');
+    this.logger.log('Starting Parallel Solving (ALNS + BRKGA)...');
 
     const workerPromises = [
       this.runWorker('ALNS', {
@@ -154,7 +164,7 @@ export class VrpRpdSolver {
     const results = await Promise.all(workerPromises);
     results.sort((a, b) => a.makespan - b.makespan);
 
-    console.log(
+    this.logger.log(
       `Parallel Solving completed. Best makespan: ${results[0]!.makespan.toFixed(2)} (${results[0]!.type})`,
     );
 
