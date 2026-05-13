@@ -1,20 +1,20 @@
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
-import { Solution, Route } from '../src/core/Solution.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { VrpSolution, Route } from '../src/core/Solution.js';
 import { VrpRpdSolver } from '../src/index.js';
 
 describe('Problem', () => {
   test('should create a problem instance', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 10, 'D1'),
-      2: new Node(2, 20, 20, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 10, 'D1'),
+      2: new LocationNode(2, 20, 20, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
 
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     expect(problem.customers.length).toBe(1);
     expect(problem.vehicles.length).toBe(1);
@@ -22,14 +22,14 @@ describe('Problem', () => {
   });
 
   test('should calculate distance matrix', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 3, 4, 'D1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 3, 4, 'D1'),
     };
     const customers = [new Customer(1, 1, 1, 50)];
     const vehicles = [new Vehicle(1, 5)];
 
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     expect(problem.getDistance(0, 1)).toBeCloseTo(5, 5);
   });
@@ -37,34 +37,34 @@ describe('Problem', () => {
 
 describe('Solution', () => {
   test('should create a solution', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 10, 'D1'),
-      2: new Node(2, 20, 20, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 10, 'D1'),
+      2: new LocationNode(2, 20, 20, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
 
     expect(solution.routes.length).toBe(1);
     expect(solution.isComplete()).toBe(true);
   });
 
   test('should calculate schedule and makespan', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
     const makespan = solution.calculateSchedule();
 
     expect(makespan).toBeGreaterThan(0);
@@ -72,33 +72,33 @@ describe('Solution', () => {
   });
 
   test('should check capacity constraints', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 1)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1, 2])];
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
 
     expect(solution.checkCapacity()).toBe(true);
   });
 
   test('should detect incomplete solutions', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const routes = [new Route(1, [1])]; // Missing pickup
-    const solution = new Solution(problem, routes);
+    const solution = new VrpSolution(problem, routes);
 
     expect(solution.isComplete()).toBe(false);
   });
@@ -106,16 +106,16 @@ describe('Solution', () => {
 
 describe('ALNS', () => {
   test('should solve a small problem', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      3: new Node(3, 0, 10, 'D2'),
-      4: new Node(4, 0, 20, 'P2'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
     };
     const customers = [new Customer(1, 1, 2, 50), new Customer(2, 3, 4, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const alns = new ALNS(problem, { maxIterations: 500 });
     const initialSolution = alns.generateInitialSolution();
@@ -130,16 +130,16 @@ describe('ALNS', () => {
 
 describe('BRKGA', () => {
   test('should solve a small problem', () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
-      3: new Node(3, 0, 10, 'D2'),
-      4: new Node(4, 0, 20, 'P2'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
     };
     const customers = [new Customer(1, 1, 2, 50), new Customer(2, 3, 4, 50)];
     const vehicles = [new Vehicle(1, 10)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
     const solution = brkga.solve();
@@ -151,14 +151,14 @@ describe('BRKGA', () => {
 
 describe('VrpRpdSolver', () => {
   test('should solve with both algorithms', async () => {
-    const nodes: Record<number, Node> = {
-      0: new Node(0, 0, 0, 'Depot'),
-      1: new Node(1, 10, 0, 'D1'),
-      2: new Node(2, 20, 0, 'P1'),
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
     };
     const customers = [new Customer(1, 1, 2, 50)];
     const vehicles = [new Vehicle(1, 5)];
-    const problem = new Problem(nodes, customers, vehicles, 0);
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const solver = new VrpRpdSolver(problem);
     const solution = await solver.solve({ alnsIterations: 10, maxGenerations: 10 });

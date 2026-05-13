@@ -85,10 +85,10 @@ describe('Edge Cases', () => {
     solution.calculateSchedule();
 
     const cloned = solution.clone();
-    cloned.routes[0]!.addNode(999);
+    cloned.routes[0].addNode(999);
 
-    expect(solution.routes[0]!.hasNode(999)).toBe(false);
-    expect(cloned.routes[0]!.hasNode(999)).toBe(true);
+    expect(solution.routes[0].hasNode(999)).toBe(false);
+    expect(cloned.routes[0].hasNode(999)).toBe(true);
   });
 
   test('calculateSchedule is idempotent', () => {
