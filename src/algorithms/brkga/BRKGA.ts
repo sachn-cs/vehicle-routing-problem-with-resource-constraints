@@ -2,6 +2,8 @@ import { Decoder, type Chromosome } from './Decoder.js';
 import { Solution } from '../../core/Solution.js';
 import type { Problem } from '../../core/Problem.js';
 import { ValidationError } from '../../errors.js';
+import type { Logger } from '../../logger.js';
+import { defaultLogger } from '../../logger.js';
 
 export interface BRKGAOptions {
   populationSize?: number;
@@ -11,6 +13,7 @@ export interface BRKGAOptions {
   maxGenerations?: number;
   warmStartSolution?: Solution | undefined;
   warmStartProportion?: number;
+  logger?: Logger;
 }
 
 interface Individual {
@@ -43,6 +46,7 @@ export class BRKGA {
   // Warm-start configuration
   protected readonly warmStartSolution: Solution | null;
   protected readonly warmStartProportion: number;
+  protected readonly logger: Logger;
 
   /**
    * @param problem - VRP-RPD problem instance to solve
@@ -81,6 +85,7 @@ export class BRKGA {
     // Warm-start from ALNS
     this.warmStartSolution = options.warmStartSolution ?? null;
     this.warmStartProportion = options.warmStartProportion ?? 0.15; // Paper spec
+    this.logger = options.logger ?? defaultLogger;
 
     this.decoder = new Decoder(problem);
     this.chromosomeSize = problem.customers.length; // n genes per component (4 components)
@@ -171,7 +176,7 @@ export class BRKGA {
 
       // Progress logging for long runs (every 1000 generations)
       if (g % 10 === 0 && bestIndividual) {
-        console.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
+        this.logger.log(`BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`);
       }
     }
 

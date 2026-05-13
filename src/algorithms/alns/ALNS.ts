@@ -2,6 +2,8 @@ import { Solution, Route } from '../../core/Solution.js';
 import { RemovalOperators, InsertionOperators } from './operators.js';
 import type { Problem } from '../../core/Problem.js';
 import { ValidationError } from '../../errors.js';
+import type { Logger } from '../../logger.js';
+import { defaultLogger } from '../../logger.js';
 
 export interface ALNSOptions {
   maxIterations?: number;
@@ -12,6 +14,7 @@ export interface ALNSOptions {
   scoreNewBest?: number;
   scoreBetter?: number;
   scoreAccepted?: number;
+  logger?: Logger;
 }
 
 /**
@@ -43,6 +46,7 @@ export class ALNS {
   protected scores: { removal: number[]; insertion: number[] };
   protected usage: { removal: number[]; insertion: number[] };
   protected readonly lambda: number;
+  protected readonly logger: Logger;
 
   protected temp: number;
 
@@ -95,6 +99,7 @@ export class ALNS {
       insertion: new Array(this.insertionOps.length).fill(0),
     };
     this.lambda = 0.1;
+    this.logger = options.logger ?? defaultLogger;
 
     this.temp = this.initialTemp;
   }
