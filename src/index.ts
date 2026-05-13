@@ -199,7 +199,7 @@ export class VrpRpdSolver {
         if (!settled) {
           settled = true;
           worker.terminate().catch(() => {});
-          reject(err);
+          reject(new AlgorithmConvergenceError(`Worker ${type} error: ${err.message}`));
         }
       });
       worker.on('exit', code => {
