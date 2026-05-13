@@ -328,9 +328,9 @@ export class BRKGA {
    * Solves using multiple island populations in parallel.
    * Stub: full implementation deferred to later tasks.
    */
-  protected async solveIslands(_startTime: number): Promise<VrpSolution> {
+  protected solveIslands(_startTime: number): Promise<VrpSolution> {
     this.logger.log(`Island-model BRKGA not yet implemented (requested ${this.islands} islands)`);
-    return this.decoder.decode(this.randomIndividual().chromosome);
+    return Promise.resolve(this.decoder.decode(this.randomIndividual().chromosome));
   }
 
   /**

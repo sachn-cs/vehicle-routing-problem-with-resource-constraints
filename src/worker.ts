@@ -45,7 +45,7 @@ const vehicles = data.vehicles.map(v => new Vehicle(v.id, v.capacity));
 
 const problem = new VrpProblem(nodes, customers, vehicles, data.depotNodeId);
 
-(async () => {
+void (async () => {
   try {
     let solution: VrpSolution;
 

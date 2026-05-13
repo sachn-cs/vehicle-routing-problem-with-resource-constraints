@@ -1,7 +1,7 @@
 import type { Worker } from 'worker_threads';
 
-import type { Chromosome } from './Decoder.js';
 import type { Individual } from './BRKGA.js';
+import type { Chromosome } from './Decoder.js';
 
 export interface IslandCheckpointMessage {
   type: 'checkpoint';
