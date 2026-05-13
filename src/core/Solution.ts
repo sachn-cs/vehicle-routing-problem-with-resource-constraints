@@ -1,4 +1,3 @@
-import { ValidationError } from '../errors.js';
 import type { VrpProblem, Customer, CustomerWithTimeWindows } from './Problem.js';
 
 /**
@@ -419,3 +418,5 @@ export class VrpSolution {
 
 /** @deprecated Use {@link VrpSolution} instead. */
 export const Solution = VrpSolution;
+/** @deprecated Use {@link VrpSolution} instead. */
+export type Solution = VrpSolution;

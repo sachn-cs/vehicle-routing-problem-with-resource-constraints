@@ -1,6 +1,6 @@
-import { Solution, Route } from '../../core/Solution.js';
+import { VrpSolution, Route } from '../../core/Solution.js';
 import { RemovalOperators, InsertionOperators } from './operators.js';
-import type { Problem } from '../../core/Problem.js';
+import type { VrpProblem } from '../../core/Problem.js';
 import { ValidationError } from '../../errors.js';
 import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
@@ -28,7 +28,7 @@ export interface ALNSOptions {
  * - 32 parallel instances per GPU
  */
 export class ALNS {
-  protected readonly problem: Problem;
+  protected readonly problem: VrpProblem;
   protected readonly maxIterations: number;
   protected readonly initialTemp: number;
   protected readonly coolingRate: number;
@@ -54,7 +54,7 @@ export class ALNS {
    * @param problem - VRP-RPD problem instance to solve
    * @param options - ALNS configuration options
    */
-  constructor(problem: Problem, options: ALNSOptions = {}) {
+  constructor(problem: VrpProblem, options: ALNSOptions = {}) {
     this.problem = problem;
 
     // Validate options
@@ -107,16 +107,16 @@ export class ALNS {
   /**
    * @returns Initial feasible solution built with greedy insertion
    */
-  generateInitialSolution(): Solution {
+  generateInitialSolution(): VrpSolution {
     const routes = this.problem.vehicles.map(v => new Route(v.id, []));
-    const emptySolution = new Solution(this.problem, routes);
+    const emptySolution = new VrpSolution(this.problem, routes);
     return InsertionOperators.greedyInsertion(emptySolution, this.problem.customers);
   }
 
   /**
    * @returns Best solution found after maxIterations
    */
-  solve(): Solution {
+  solve(): VrpSolution {
     let currentSolution = this.generateInitialSolution();
     let bestSolution = currentSolution.clone();
     let currentCost = currentSolution.calculateSchedule();

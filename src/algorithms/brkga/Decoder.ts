@@ -1,5 +1,5 @@
-import { Solution, Route } from '../../core/Solution.js';
-import type { Problem, Customer } from '../../core/Problem.js';
+import { VrpSolution, Route } from '../../core/Solution.js';
+import type { VrpProblem, Customer, Vehicle } from '../../core/Problem.js';
 
 /**
  * Paper chromosome structure (4n genes):
@@ -27,14 +27,14 @@ export interface Chromosome {
  * then pickup after processing time) is not yet implemented.
  */
 export class Decoder {
-  constructor(private readonly problem: Problem) {}
+  constructor(private readonly problem: VrpProblem) {}
 
-  decode(chromosome: Chromosome): Solution {
-    const routes = this.problem.vehicles.map(v => new Route(v.id, []));
-    const solution = new Solution(this.problem, routes);
+  decode(chromosome: Chromosome): VrpSolution {
+    const routes = this.problem.vehicles.map((v: Vehicle) => new Route(v.id, []));
+    const solution = new VrpSolution(this.problem, routes);
 
     // Create customer order based on priority genes (π)
-    const customerIndices = this.problem.customers.map((_, i) => i);
+    const customerIndices = this.problem.customers.map((_c: Customer, i: number) => i);
     customerIndices.sort((a, b) => chromosome.priorities[a]! - chromosome.priorities[b]!);
 
     // Multi-pass scheduling
@@ -134,7 +134,7 @@ export class Decoder {
    * Creates a chromosome from a solution (for warm-start).
    * Encodes an existing solution into the 4n gene structure.
    */
-  encode(solution: Solution): Chromosome {
+  encode(solution: VrpSolution): Chromosome {
     const n = this.problem.customers.length;
 
     const priorities = new Array(n).fill(0);

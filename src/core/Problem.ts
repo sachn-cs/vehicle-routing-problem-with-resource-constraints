@@ -229,5 +229,10 @@ export class VrpProblem {
 
 /** @deprecated Use {@link LocationNode} instead. */
 export const Node = LocationNode;
+/** @deprecated Use {@link LocationNode} instead. */
+export type Node = LocationNode;
+
 /** @deprecated Use {@link VrpProblem} instead. */
 export const Problem = VrpProblem;
+/** @deprecated Use {@link VrpProblem} instead. */
+export type Problem = VrpProblem;

@@ -1,6 +1,6 @@
 import { Decoder, type Chromosome } from './Decoder.js';
-import { Solution } from '../../core/Solution.js';
-import type { Problem } from '../../core/Problem.js';
+import { VrpSolution } from '../../core/Solution.js';
+import type { VrpProblem } from '../../core/Problem.js';
 import { ValidationError } from '../../errors.js';
 import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
@@ -11,7 +11,7 @@ export interface BRKGAOptions {
   mutantFraction?: number;
   crossoverProb?: number;
   maxGenerations?: number;
-  warmStartSolution?: Solution | undefined;
+  warmStartSolution?: VrpSolution | undefined;
   warmStartProportion?: number;
   logger?: Logger;
 }
@@ -19,7 +19,7 @@ export interface BRKGAOptions {
 interface Individual {
   chromosome: Chromosome;
   fitness: number | null;
-  solution: Solution | null;
+  solution: VrpSolution | null;
 }
 
 /**
@@ -34,7 +34,7 @@ interface Individual {
  * - Warm-start: 15% from ALNS solution
  */
 export class BRKGA {
-  protected readonly problem: Problem;
+  protected readonly problem: VrpProblem;
   protected readonly populationSize: number;
   protected readonly eliteFraction: number;
   protected readonly mutantFraction: number;
@@ -44,7 +44,7 @@ export class BRKGA {
   protected readonly chromosomeSize: number;
 
   // Warm-start configuration
-  protected readonly warmStartSolution: Solution | null;
+  protected readonly warmStartSolution: VrpSolution | null;
   protected readonly warmStartProportion: number;
   protected readonly logger: Logger;
 
@@ -52,7 +52,7 @@ export class BRKGA {
    * @param problem - VRP-RPD problem instance to solve
    * @param options - BRKGA configuration options
    */
-  constructor(problem: Problem, options: BRKGAOptions = {}) {
+  constructor(problem: VrpProblem, options: BRKGAOptions = {}) {
     this.problem = problem;
 
     // Validate options
@@ -94,7 +94,7 @@ export class BRKGA {
   /**
    * @returns Best solution found after convergence or max generations
    */
-  solve(): Solution {
+  solve(): VrpSolution {
     let population = this.initializePopulation();
     let bestIndividual: Individual | null = null;
     let generationsWithoutImprovement = 0;
@@ -295,7 +295,7 @@ export class BRKGA {
    * @param population - Current population to search
    * @returns Best feasible solution in the population
    */
-  getBestSolution(population: Individual[]): Solution | null {
+  getBestSolution(population: Individual[]): VrpSolution | null {
     const sorted = [...population].sort(
       (a, b) => (a.fitness ?? Infinity) - (b.fitness ?? Infinity),
     );
