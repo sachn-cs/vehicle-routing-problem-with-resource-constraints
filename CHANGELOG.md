@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Solution comparison tool (`SolutionComparator` class)
 - GIS export functionality (GeoJSON, KML, CSV) via `GISExporter`
 - Transfer-aware ALNS operators
+- Island-model BRKGA parallelization via `worker_threads` with configurable islands, migration intervals, and elite exchange
 
 ### Changed
 - BRKGA decoder rewritten as multi-pass (delivery-first, then pickup after processing time)
@@ -72,7 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Issues
 - No GPU acceleration
-- No island-model BRKGA parallelization
 
 ---
 
