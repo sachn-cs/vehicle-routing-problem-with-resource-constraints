@@ -88,7 +88,7 @@ export class BRKGA {
     this.logger = options.logger ?? defaultLogger;
 
     this.decoder = new Decoder(problem);
-    this.chromosomeSize = problem.customers.length; // n genes per component (4 components)
+    this.chromosomeSize = problem.customers.length * 4; // 4n genes
   }
 
   /**
