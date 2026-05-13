@@ -67,7 +67,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/vrp-rpd.git"
+    "url": "https://github.com/sachn-cs/vehicle-routing-problem-with-resource-constraints.git"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.0",
