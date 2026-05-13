@@ -1,6 +1,7 @@
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
 import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { expect } from 'chai';
 
 describe('Algorithm Correctness', () => {
   const makeProblem = () => {

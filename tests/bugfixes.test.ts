@@ -13,6 +13,7 @@ import {
 import { TrafficAwareProblem, TrafficModel } from '../src/core/TrafficAwareProblem.js';
 import { VehicleWithCapabilities } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
+import { expect } from 'chai';
 
 // ============================================================
 // C1: totalCost / totalCO2 must be per-route, per-vehicle

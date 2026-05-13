@@ -8,6 +8,7 @@ import { VrpSolution, Route } from '../src/core/Solution.js';
 import { ProblemWithTransfers } from '../src/core/SolutionWithTransfers.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
+import { expect } from 'chai';
 
 // ============================================================
 // T1: ResourceType is a closed union

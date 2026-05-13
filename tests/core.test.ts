@@ -3,6 +3,7 @@ import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
 import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
 import { VrpSolution, Route } from '../src/core/Solution.js';
 import { VrpRpdSolver } from '../src/index.js';
+import { expect } from 'chai';
 
 describe('Problem', () => {
   it('should create a problem instance', () => {
