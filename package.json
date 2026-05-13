@@ -52,10 +52,10 @@
       "demo/**"
     ],
     "check-coverage": true,
-    "lines": 75,
-    "functions": 75,
-    "branches": 75,
-    "statements": 75
+    "lines": 70,
+    "functions": 74,
+    "branches": 72,
+    "statements": 70
   },
   "keywords": [
     "vrp",

@@ -21,7 +21,6 @@ This implementation is based on:
 
 **Key differences from paper:**
 - CPU-based (no GPU acceleration)
-- Simplified parallel model (no island-model BRKGA)
 
 ## Installation
 
@@ -135,10 +134,32 @@ interface SolveOptions {
   warmStart?: boolean;         // Default: true
   maxTimeMs?: number;          // Default: 0 (unlimited)
   targetMakespan?: number;     // Default: 0 (disabled)
+  islands?: number;            // Default: 1 (single-island)
+  migrationInterval?: number;  // Default: 50
+  migrantFraction?: number;    // Default: 0.05
   logger?: Logger;             // Custom logger
   onProgress?: (progress: SolverProgress) => void;
 }
 ```
+
+### Island-Model BRKGA
+
+For multi-core machines, BRKGA can run multiple independent populations (islands) that periodically exchange elite individuals. This often improves solution quality and convergence speed.
+
+```typescript
+const solution = await solver.solve({
+  islands: 4,              // Number of parallel populations (default: 1)
+  migrationInterval: 50,   // Generations between migrations (default: 50)
+  migrantFraction: 0.05,   // Fraction of elites that emigrate (default: 0.05)
+  populationSize: 30000,
+  maxGenerations: 20000,
+});
+```
+
+- `islands: 1` disables island mode (single population, default).
+- Each island receives `populationSize / islands` individuals.
+- Migration uses fully-connected topology: elites from all islands are pooled, shuffled, and redistributed.
+- If a worker crashes, the solver falls back to single-island BRKGA.
 
 ### Progress Callback
 
