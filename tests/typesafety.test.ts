@@ -1,13 +1,13 @@
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
-import { Solution, Route } from '../src/core/Solution.js';
-import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
-import { ProblemWithTransfers, SolutionWithTransfers } from '../src/core/SolutionWithTransfers.js';
-import { TransferHub } from '../src/core/ResourceTransfer.js';
-import { RouteAnalytics } from '../src/analytics/RouteAnalytics.js';
-import { GISExporter } from '../src/export/GISExporter.js';
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
-import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
+import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
+import { RouteAnalytics } from '../src/analytics/RouteAnalytics.js';
+import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
+import { TransferHub } from '../src/core/ResourceTransfer.js';
+import { Solution, Route } from '../src/core/Solution.js';
+import { ProblemWithTransfers } from '../src/core/SolutionWithTransfers.js';
+import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
+import { GISExporter } from '../src/export/GISExporter.js';
 
 // ============================================================
 // T1: ResourceType is a closed union
@@ -159,6 +159,7 @@ describe('T5 - Safe indexed access in algorithms', () => {
     const solver = new ALNS(problem, { maxIterations: 2 });
 
     // Access protected method via type assertion for testing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const idx = (solver as any).selectOperator([0, 0, 0]);
     expect(idx).toBeGreaterThanOrEqual(0);
     expect(idx).toBeLessThanOrEqual(2);

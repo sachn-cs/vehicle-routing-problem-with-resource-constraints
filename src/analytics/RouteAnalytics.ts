@@ -1,5 +1,5 @@
-import type { Solution } from '../core/Solution.js';
 import type { Problem, CustomerWithTimeWindows } from '../core/Problem.js';
+import type { Solution } from '../core/Solution.js';
 
 export interface VehicleUtilization {
   vehicleId: number;

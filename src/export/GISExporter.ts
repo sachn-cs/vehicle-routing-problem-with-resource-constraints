@@ -1,5 +1,5 @@
-import type { Solution } from '../core/Solution.js';
 import type { Problem } from '../core/Problem.js';
+import type { Solution } from '../core/Solution.js';
 
 export interface GeoJSONFeature {
   type: 'Feature';

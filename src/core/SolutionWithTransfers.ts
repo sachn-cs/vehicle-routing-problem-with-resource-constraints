@@ -1,8 +1,9 @@
-import { Solution, Route } from './Solution.js';
 import { Problem } from './Problem.js';
 import type { Customer, Node } from './Problem.js';
-import { TransferManager, TransferHub } from './ResourceTransfer.js';
-import type { ResourceTransfer } from './ResourceTransfer.js';
+import { TransferManager } from './ResourceTransfer.js';
+import type { ResourceTransfer , TransferHub } from './ResourceTransfer.js';
+import { Solution } from './Solution.js';
+import type { Route } from './Solution.js';
 import { VehicleWithCapabilities, VehicleFleetManager } from './VehicleWithCapabilities.js';
 
 /**

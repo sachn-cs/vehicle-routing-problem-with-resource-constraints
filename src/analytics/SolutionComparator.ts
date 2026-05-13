@@ -1,6 +1,7 @@
-import type { Solution } from '../core/Solution.js';
-import { RouteAnalytics } from './RouteAnalytics.js';
 import type { Problem } from '../core/Problem.js';
+import type { Solution } from '../core/Solution.js';
+
+import { RouteAnalytics } from './RouteAnalytics.js';
 
 export interface SolutionMetrics {
   makespan: number;

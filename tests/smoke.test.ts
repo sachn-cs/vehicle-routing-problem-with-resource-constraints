@@ -1,7 +1,7 @@
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem';
-import { Solution, Route } from '../src/core/Solution';
 import { ALNS } from '../src/algorithms/alns/ALNS';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA';
+import { Problem, Node, Customer, Vehicle } from '../src/core/Problem';
+import { Solution, Route } from '../src/core/Solution';
 
 describe('Smoke Tests', () => {
   const nodes: Record<number, Node> = {

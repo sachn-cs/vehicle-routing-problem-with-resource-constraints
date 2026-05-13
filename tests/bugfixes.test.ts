@@ -1,16 +1,17 @@
-import { Problem, Node, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/Problem.js';
-import { Solution, Route } from '../src/core/Solution.js';
-import { TrafficAwareProblem, TrafficModel } from '../src/core/TrafficAwareProblem.js';
-import { VehicleWithCapabilities } from '../src/core/VehicleWithCapabilities.js';
-import { TransferManager, TransferHub, ResourceTransfer } from '../src/core/ResourceTransfer.js';
-import {
-  SolutionWithTransfers,
-  ProblemWithTransfers,
-} from '../src/core/SolutionWithTransfers.js';
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
 import { TransferAwareInsertionOperators } from '../src/algorithms/alns/TransferAwareOperators.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
+import { Problem, Node, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/Problem.js';
+import type { ResourceTransfer } from '../src/core/ResourceTransfer.js';
+import { TransferManager, TransferHub } from '../src/core/ResourceTransfer.js';
+import { Solution, Route } from '../src/core/Solution.js';
+import {
+  SolutionWithTransfers,
+  ProblemWithTransfers,
+} from '../src/core/SolutionWithTransfers.js';
+import { TrafficAwareProblem, TrafficModel } from '../src/core/TrafficAwareProblem.js';
+import { VehicleWithCapabilities } from '../src/core/VehicleWithCapabilities.js';
 import { GISExporter } from '../src/export/GISExporter.js';
 
 // ============================================================
@@ -267,7 +268,7 @@ describe('C6 - Transfer-aware insertion registers transfers', () => {
     );
 
     // At least one transfer should have been registered if a hub was used
-    const totalTransferTime = result.calculateTotalTimeWithTransfers();
+    result.calculateTotalTimeWithTransfers();
     // The method always returns a solution; verify it is complete
     expect(result.isComplete()).toBe(true);
     // If transfers were used, the transfer array or manager should reflect them
@@ -393,6 +394,7 @@ describe('C10 - ALNS selectOperator zero-weight safety', () => {
     const alns = new ALNS(problem, { maxIterations: 2 });
 
     // Access protected method via type assertion for testing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const idx = (alns as any).selectOperator([0, 0, 0]);
     expect(idx).toBeGreaterThanOrEqual(0);
     expect(idx).toBeLessThanOrEqual(2);

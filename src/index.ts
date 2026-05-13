@@ -56,14 +56,15 @@ export { GISExporter } from './export/GISExporter.js';
 export type { GeoJSON, GeoJSONFeature, KMLPlacemark } from './export/GISExporter.js';
 
 // Main solver class
+import { resolve } from 'path';
+import { Worker } from 'worker_threads';
+
 import { ALNS } from './algorithms/alns/ALNS.js';
+import type { ALNSOptions } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
+import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
 import type { Problem } from './core/Problem.js';
 import { Solution, Route } from './core/Solution.js';
-import { Worker } from 'worker_threads';
-import { resolve } from 'path';
-import type { ALNSOptions } from './algorithms/alns/ALNS.js';
-import type { BRKGAOptions } from './algorithms/brkga/BRKGA.js';
 import { AlgorithmConvergenceError } from './errors.js';
 import type { Logger } from './logger.js';
 import { defaultLogger } from './logger.js';

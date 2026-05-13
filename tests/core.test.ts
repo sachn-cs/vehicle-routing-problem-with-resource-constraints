@@ -1,7 +1,7 @@
-import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
-import { Solution, Route } from '../src/core/Solution.js';
 import { ALNS } from '../src/algorithms/alns/ALNS.js';
 import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
+import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
+import { Solution, Route } from '../src/core/Solution.js';
 import { VrpRpdSolver } from '../src/index.js';
 
 describe('Problem', () => {

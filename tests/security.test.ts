@@ -1,6 +1,6 @@
 import { Problem, Node, Customer, Vehicle } from '../src/core/Problem.js';
-import { GISExporter } from '../src/export/GISExporter.js';
 import { Solution, Route } from '../src/core/Solution.js';
+import { GISExporter } from '../src/export/GISExporter.js';
 import { isWorkerData, validateWorkerData } from '../src/workerValidation.js';
 
 describe('Security S1 - KML XML escaping', () => {
@@ -17,6 +17,7 @@ describe('Security S1 - KML XML escaping', () => {
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const escapeXml = (exporter as any).escapeXml.bind(exporter);
 
     expect(escapeXml('foo < bar')).toBe('foo &lt; bar');
@@ -74,6 +75,7 @@ describe('Security S2 - CSV escaping', () => {
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
 
     expect(escapeCsv('hello, world')).toBe('"hello, world"');
@@ -90,6 +92,7 @@ describe('Security S2 - CSV escaping', () => {
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
 
     expect(escapeCsv('say "hello"')).toBe('"say ""hello"""');
@@ -106,6 +109,7 @@ describe('Security S2 - CSV escaping', () => {
     solution.calculateSchedule();
 
     const exporter = new GISExporter(solution, problem);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const escapeCsv = (exporter as any).escapeCsv.bind(exporter);
 
     expect(escapeCsv('line1\nline2')).toBe('"line1\nline2"');

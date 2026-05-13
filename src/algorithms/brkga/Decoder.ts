@@ -1,5 +1,5 @@
-import { VrpSolution, Route } from '../../core/Solution.js';
 import type { VrpProblem, Customer, Vehicle } from '../../core/Problem.js';
+import { VrpSolution, Route } from '../../core/Solution.js';
 
 /**
  * Paper chromosome structure (4n genes):

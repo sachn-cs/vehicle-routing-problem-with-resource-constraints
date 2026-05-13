@@ -1,8 +1,9 @@
 import { workerData, parentPort } from 'worker_threads';
-import { Problem, Node, Customer, Vehicle } from './core/Problem.js';
-import { Solution } from './core/Solution.js';
+
 import { ALNS } from './algorithms/alns/ALNS.js';
 import { BRKGA } from './algorithms/brkga/BRKGA.js';
+import { Problem, Node, Customer, Vehicle } from './core/Problem.js';
+import type { Solution } from './core/Solution.js';
 import { isWorkerData, validateWorkerData } from './workerValidation.js';
 
 interface WorkerResult {

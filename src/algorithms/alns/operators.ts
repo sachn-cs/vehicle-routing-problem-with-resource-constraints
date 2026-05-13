@@ -1,5 +1,5 @@
-import type { VrpSolution } from '../../core/Solution.js';
 import type { Customer, CustomerWithTimeWindows, LocationNode } from '../../core/Problem.js';
+import type { VrpSolution } from '../../core/Solution.js';
 
 function removeCustomerFromRoutes(solution: VrpSolution, customer: Customer): boolean {
   let removedAny = false;

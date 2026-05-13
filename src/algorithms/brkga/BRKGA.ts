@@ -1,9 +1,10 @@
-import { Decoder, type Chromosome } from './Decoder.js';
-import { VrpSolution } from '../../core/Solution.js';
 import type { VrpProblem } from '../../core/Problem.js';
+import type { VrpSolution } from '../../core/Solution.js';
 import { ValidationError } from '../../errors.js';
 import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
+
+import { Decoder, type Chromosome } from './Decoder.js';
 
 export interface BRKGAOptions {
   populationSize?: number;
