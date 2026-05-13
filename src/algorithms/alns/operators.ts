@@ -1,6 +1,22 @@
 import type { Solution } from '../../core/Solution.js';
 import type { Customer, CustomerWithTimeWindows, Node } from '../../core/Problem.js';
 
+function removeCustomerFromRoutes(solution: Solution, customer: Customer): boolean {
+  let removedAny = false;
+  for (const route of solution.routes) {
+    const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
+    const pIndex = route.nodes.indexOf(customer.pickupNodeId);
+    if (dIndex !== -1) {
+      route.nodes.splice(dIndex, 1);
+      removedAny = true;
+    }
+    if (pIndex !== -1) {
+      route.nodes.splice(pIndex, 1);
+    }
+  }
+  return removedAny;
+}
+
 /**
  * Removal operators for ALNS.
  * Paper specifies 6 destroy operators.
@@ -20,17 +36,8 @@ export const RemovalOperators = {
       if (!spliced) continue;
       const customer = spliced;
 
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-
-        if (dIndex !== -1) {
-          route.nodes.splice(dIndex, 1);
-          removed.push(customer);
-        }
-        if (pIndex !== -1) {
-          route.nodes.splice(pIndex, 1);
-        }
+      if (removeCustomerFromRoutes(newSolution, customer)) {
+        removed.push(customer);
       }
     }
 
@@ -61,17 +68,8 @@ export const RemovalOperators = {
       if (!entry) continue;
       const customer = entry.customer;
 
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-
-        if (dIndex !== -1) {
-          route.nodes.splice(dIndex, 1);
-          removed.push(customer);
-        }
-        if (pIndex !== -1) {
-          route.nodes.splice(pIndex, 1);
-        }
+      if (removeCustomerFromRoutes(newSolution, customer)) {
+        removed.push(customer);
       }
     }
 
@@ -100,13 +98,7 @@ export const RemovalOperators = {
     const removedSet = new Set<number>([seed.id]);
     removed.push(seed);
 
-    // Remove from routes
-    for (const route of newSolution.routes) {
-      const dIndex = route.nodes.indexOf(seed.deliveryNodeId);
-      const pIndex = route.nodes.indexOf(seed.pickupNodeId);
-      if (dIndex !== -1) route.nodes.splice(dIndex, 1);
-      if (pIndex !== -1) route.nodes.splice(pIndex, 1);
-    }
+    removeCustomerFromRoutes(newSolution, seed);
 
     // Find related customers to remove
     while (removed.length < k) {
@@ -134,13 +126,7 @@ export const RemovalOperators = {
       removedSet.add(bestCustomer.id);
       removed.push(bestCustomer);
 
-      // Remove from routes
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(bestCustomer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(bestCustomer.pickupNodeId);
-        if (dIndex !== -1) route.nodes.splice(dIndex, 1);
-        if (pIndex !== -1) route.nodes.splice(pIndex, 1);
-      }
+      removeCustomerFromRoutes(newSolution, bestCustomer);
     }
 
     return { solution: newSolution, removed };
@@ -180,17 +166,8 @@ export const RemovalOperators = {
       const customer = sortedCustomers[i];
       if (!customer) continue;
 
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-
-        if (dIndex !== -1) {
-          route.nodes.splice(dIndex, 1);
-          removed.push(customer);
-        }
-        if (pIndex !== -1) {
-          route.nodes.splice(pIndex, 1);
-        }
+      if (removeCustomerFromRoutes(newSolution, customer)) {
+        removed.push(customer);
       }
     }
 
@@ -230,17 +207,8 @@ export const RemovalOperators = {
       const customer = sortedCustomers[i];
       if (!customer) continue;
 
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-
-        if (dIndex !== -1) {
-          route.nodes.splice(dIndex, 1);
-          removed.push(customer);
-        }
-        if (pIndex !== -1) {
-          route.nodes.splice(pIndex, 1);
-        }
+      if (removeCustomerFromRoutes(newSolution, customer)) {
+        removed.push(customer);
       }
     }
 
@@ -289,17 +257,8 @@ export const RemovalOperators = {
       if (!entry) continue;
       const customer = entry.customer;
 
-      for (const route of newSolution.routes) {
-        const dIndex = route.nodes.indexOf(customer.deliveryNodeId);
-        const pIndex = route.nodes.indexOf(customer.pickupNodeId);
-
-        if (dIndex !== -1) {
-          route.nodes.splice(dIndex, 1);
-          removed.push(customer);
-        }
-        if (pIndex !== -1) {
-          route.nodes.splice(pIndex, 1);
-        }
+      if (removeCustomerFromRoutes(newSolution, customer)) {
+        removed.push(customer);
       }
     }
 
