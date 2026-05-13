@@ -26,6 +26,12 @@ export interface BRKGAOptions {
   maxTimeMs?: number;
   /** Called every 100 generations with progress */
   onProgress?: (progress: BRKGAProgress) => void;
+  /** Number of parallel island populations (default: 1 = single-island) */
+  islands?: number;
+  /** Generations between migrations (default: 50) */
+  migrationInterval?: number;
+  /** Fraction of each island that emigrates (default: 0.05) */
+  migrantFraction?: number;
 }
 
 export interface Individual {
@@ -61,6 +67,9 @@ export class BRKGA {
   protected readonly logger: Logger;
   protected readonly maxTimeMs: number;
   protected readonly onProgress: ((progress: BRKGAProgress) => void) | null;
+  protected readonly islands: number;
+  protected readonly migrationInterval: number;
+  protected readonly migrantFraction: number;
 
   /**
    * @param problem - VRP-RPD problem instance to solve
@@ -88,6 +97,15 @@ export class BRKGA {
     if (options.warmStartProportion !== undefined && (options.warmStartProportion <= 0 || options.warmStartProportion >= 1)) {
       throw new ValidationError('Warm-start proportion must be between 0 and 1 (exclusive)');
     }
+    if (options.islands !== undefined && options.islands < 1) {
+      throw new ValidationError('islands must be a positive integer');
+    }
+    if (options.migrationInterval !== undefined && options.migrationInterval < 1) {
+      throw new ValidationError('migrationInterval must be a positive integer');
+    }
+    if (options.migrantFraction !== undefined && (options.migrantFraction <= 0 || options.migrantFraction >= 1)) {
+      throw new ValidationError('migrantFraction must be between 0 and 1 (exclusive)');
+    }
 
     // Practical library defaults (paper spec: 30,000 pop / 20,000 gen)
     this.populationSize = options.populationSize ?? 100;
@@ -102,6 +120,9 @@ export class BRKGA {
     this.logger = options.logger ?? defaultLogger;
     this.maxTimeMs = options.maxTimeMs ?? 0;
     this.onProgress = options.onProgress ?? null;
+    this.islands = options.islands ?? 1;
+    this.migrationInterval = options.migrationInterval ?? 50;
+    this.migrantFraction = options.migrantFraction ?? 0.05;
 
     this.decoder = new Decoder(problem);
     this.chromosomeSize = problem.customers.length; // n genes per component; 4 components = 4n total
