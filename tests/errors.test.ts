@@ -33,8 +33,10 @@ describe('Typed Errors', () => {
     try {
       throw new ValidationError('test');
     } catch (e) {
-      expect(e).to.be.an.instanceOf(VrpError);
-      expect((e as ValidationError).message).to.equal('test');
+      expect(e).to.be.an.instanceOf(ValidationError);
+      if (e instanceof ValidationError) {
+        expect(e.message).to.equal('test');
+      }
     }
   });
 });

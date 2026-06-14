@@ -1,6 +1,6 @@
-import type { Customer } from '../../core/Problem.js';
-import type { TransferHub } from '../../core/ResourceTransfer.js';
-import type { SolutionWithTransfers } from '../../core/SolutionWithTransfers.js';
+import type { Customer } from '../../core/problem.js';
+import type { TransferHub } from '../../core/resource-transfer.js';
+import type { SolutionWithTransfers } from '../../core/solution-with-transfers.js';
 
 /**
  * Transfer-aware insertion operators for ALNS.
@@ -78,7 +78,10 @@ export const TransferAwareInsertionOperators = {
               if (!deliveryRoute || !pickupRoute) continue;
 
               // Geographic pruning: skip hub if it is unreasonably far
-              const directDist = solution.problem.getDistance(customer.deliveryNodeId, customer.pickupNodeId);
+              const directDist = solution.problem.getDistance(
+                customer.deliveryNodeId,
+                customer.pickupNodeId,
+              );
               const viaHubDist =
                 solution.problem.getDistance(customer.deliveryNodeId, hub.id) +
                 solution.problem.getDistance(hub.id, customer.pickupNodeId);

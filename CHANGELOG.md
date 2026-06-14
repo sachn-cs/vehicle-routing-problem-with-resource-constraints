@@ -8,24 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Island-model BRKGA** - Multi-population parallel evolution via `worker_threads` with `IslandMessenger` for elite migration between islands
 - **CLI** - Command-line solver with JSON input/output (`vrp-solver`)
 - **Solution serialization** - `serialize()` and `deserialize()` on `VrpSolution`
 - **Solver capabilities** - `maxTimeMs`, `targetMakespan`, progress callbacks
 - **Benchmark tests** - Performance and scalability validation
-- TypeScript conversion with strict mode enabled
-- Multi-objective optimization support (Pareto fronts)
-- Time Windows (VRPTW) support via `CustomerWithTimeWindows` class
-- Multi-depot problem support via `MultiDepotProblem` class
-- Traffic-aware routing via `TrafficAwareProblem` and `TrafficModel` classes
-- Inter-vehicle resource transfer via `TransferHub` and `TransferManager`
-- Vehicle capabilities system via `VehicleWithCapabilities` and `VehicleFleetManager`
-- Route analytics dashboard (`RouteAnalytics` class)
-- Solution comparison tool (`SolutionComparator` class)
-- GIS export functionality (GeoJSON, KML, CSV) via `GISExporter`
-- Transfer-aware ALNS operators
-- Island-model BRKGA parallelization via `worker_threads` with configurable islands, migration intervals, and elite exchange
+- **Decoder optimization** - O(n)→O(1) capacity checks with incremental `RouteLoad` tracking, precomputed vehicle assignments, single-pass pickup scheduling
+- **ALNS improvements** - Adaptive removal sizing (10%→45% fraction based on stagnation), multi-restart (up to 3 restarts with temperature reset), clone avoidance
+- **BRKGA improvements** - Elite diversity preservation (mild mutation on elite copies), adaptive mutation rate (up to +5% extra mutants when stagnant), periodic immigrant injection (20% population replacement), hall-of-fame tracking
+- **Multi-objective optimization** - Pareto front support for makespan, distance, cost, CO₂
+- **Time Windows (VRPTW)** - Earliest/latest delivery and pickup constraints via `CustomerWithTimeWindows`
+- **Multi-depot problem** - Vehicles start/end at different depots via `MultiDepotProblem` + `Depot`
+- **Traffic-aware routing** - Time-dependent travel speeds via `TrafficAwareProblem` + `TrafficModel`
+- **Inter-vehicle resource transfer** - Hub-based exchanges via `TransferHub`, `TransferManager`, `VehicleWithCapabilities`
+- **Route analytics** - Vehicle utilization, wait times, load profiles via `RouteAnalytics`
+- **Solution comparison** - Pareto-ranking with dominance frontier via `SolutionComparator`
+- **GIS export** - GeoJSON, KML, CSV output via `GISExporter`
+- **Transfer-aware ALNS operators** - Dedicated destroy/repair for transfer operations
+- **Typed errors** - `VrpError`, `ValidationError`, `InfeasibleSolutionError`, `AlgorithmConvergenceError`
+- **Logger interface** - Pluggable logging via `Logger` interface with `defaultLogger`
+- **CI/CD pipeline** - GitHub Actions with lint/typecheck/test/build/publish workflows
+- **Verification tests** - 5 algorithm correctness tests + 2 decoder benchmark tests (212 total)
 
 ### Changed
+- **Test framework** - Migrated from Jest to Mocha + Chai + tsx for module-native ESM support
+- **ESLint** - Migrated to flat config (`eslint.config.mjs`) with `@typescript-eslint` strict rules at `error` level
+- **TypeScript** - Strict mode with `noUncheckedIndexedAccess`, `noImplicitReturns`, `exactOptionalPropertyTypes`
 - BRKGA decoder rewritten as multi-pass (delivery-first, then pickup after processing time)
 - BRKGA chromosome expanded to 4n structure (π, σ, α, β)
 - ALNS wired with all 6 destroy + 4 repair operators from paper
@@ -35,12 +43,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Converted entire codebase from JavaScript to TypeScript
 - Updated ALNS default parameters to paper specs
 - Enhanced `Solution` class with multi-objective tracking
+- `VrpRpdSolver` accepts optional `Logger` in constructor
+- Rollup build produces ESM + CJS + `.d.ts` type declarations
+- File names renamed to kebab-case per Google TypeScript Style Guide
 
 ### Deprecated
 - `Problem` alias (use `VrpProblem`)
 - `Node` alias (use `LocationNode`)
 - `Solution` alias (use `VrpSolution`)
 - JavaScript source files (`.js` → `.ts`)
+
+### Removed
+- All `eslint-disable` comments (0 suppressed rules)
+- All `as` type assertions from source code
+- All non-null assertions (`!`) from source code
+- All `Array()` constructor usage (replaced with `Array.from`)
+- Redundant `public` on class body members (18 occurrences)
+- Empty `.catch(() => {})` handlers (5 occurrences)
+- `Object.keys() + as` pattern (replaced with typed key arrays)
+- Old JavaScript source and test files (`.js`)
+- 7 previously suppressed ESLint rules (now fully enabled)
+- Jest configuration and dependencies
+- Migration scripts
 
 ### Fixed
 - BRKGA timeout and progress callback support
@@ -49,14 +73,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint 9 flat config with zero warnings
 - All `any` types removed from source and tests
 - Template expression type safety
-
-### Removed
-- Old JavaScript test files
-- 7 suppressed ESLint rules (now fully enabled)
+- Decoder chromosome size corrected to 4n per paper specification
+- ALNS operator index-shift bug (remove higher-index customers first)
+- Stale fitness after elite diversity mutation (reset to `null` for re-evaluation)
+- Stagnation detection now resets weights and temperature on multi-restart
+- Google TypeScript Style Guide compliance (zero violations)
 
 ### Security
 - Added strict TypeScript configuration for type safety
 - Input validation on all problem constructors
+- CI with explicit least-privilege permissions and provenance
 
 ---
 

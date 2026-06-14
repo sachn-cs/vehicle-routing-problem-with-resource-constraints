@@ -1,5 +1,6 @@
-import type { VrpProblem, CustomerWithTimeWindows } from '../core/Problem.js';
-import type { VrpSolution } from '../core/Solution.js';
+import type { VrpProblem } from '../core/problem.js';
+import type { VrpSolution } from '../core/solution.js';
+import { isCustomerWithTimeWindows } from '../core/solution.js';
 
 export interface VehicleUtilization {
   vehicleId: number;
@@ -126,10 +127,9 @@ export class RouteAnalytics {
       }
 
       // Check time window constraints
-      if ('earliestDeliveryTime' in customer) {
-        const twCustomer = customer as CustomerWithTimeWindows;
-        if (customer.deliveryNodeId === nodeId && arrivalTime < twCustomer.earliestDeliveryTime) {
-          waitTime = twCustomer.earliestDeliveryTime - arrivalTime;
+      if (isCustomerWithTimeWindows(customer)) {
+        if (customer.deliveryNodeId === nodeId && arrivalTime < customer.earliestDeliveryTime) {
+          waitTime = customer.earliestDeliveryTime - arrivalTime;
           reason = 'timeWindow';
         }
       }

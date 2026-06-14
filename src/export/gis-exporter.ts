@@ -1,5 +1,5 @@
-import type { VrpProblem } from '../core/Problem.js';
-import type { VrpSolution } from '../core/Solution.js';
+import type { VrpProblem } from '../core/problem.js';
+import type { VrpSolution } from '../core/solution.js';
 
 export interface GeoJSONFeature {
   type: 'Feature';
@@ -191,9 +191,7 @@ export class GISExporter {
         kml += '    </Style>\n';
       }
 
-      const coordsStr = Array.isArray(pm.coordinates[0])
-        ? (pm.coordinates as [number, number][]).map(c => `${c[0]},${c[1]},0`).join(' ')
-        : `${(pm.coordinates as [number, number])[0]},${(pm.coordinates as [number, number])[1]},0`;
+      const coordsStr = this.coordsToKmlString(pm.coordinates);
 
       kml += `    <LineString>\n`;
       kml += '      <coordinates>' + coordsStr + '</coordinates>\n';
@@ -232,7 +230,8 @@ export class GISExporter {
       }
 
       for (let seq = 0; seq < route.nodes.length; seq++) {
-        const nodeId = route.nodes[seq]!;
+        const nodeId = route.nodes[seq];
+        if (nodeId === undefined) continue;
         const node = this.problem.nodes[nodeId];
         if (!node) continue;
 
@@ -311,13 +310,31 @@ export class GISExporter {
     return str;
   }
 
+  private isCoordList(coords: [number, number][] | [number, number]): coords is [number, number][] {
+    return Array.isArray(coords[0]);
+  }
+
+  private coordsToKmlString(coords: [number, number][] | [number, number]): string {
+    if (this.isCoordList(coords)) {
+      let result = '';
+      for (const c of coords) {
+        result += `${c[0]},${c[1]},0 `;
+      }
+      return result.trim();
+    }
+    return `${coords[0]},${coords[1]},0`;
+  }
+
   private rgbToKmlColor(rgb: string): string {
     // KML uses ABGR format (little-endian)
     const hex = rgb.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
+    const r = Number.parseInt(hex.substring(0, 2), 16);
+    const g = Number.parseInt(hex.substring(2, 4), 16);
+    const b = Number.parseInt(hex.substring(4, 6), 16);
     // KML format: aabbggrr (alpha is ff for opaque)
-    return `ff${b.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${r.toString(16).padStart(2, '0')}`;
+    const bHex = b.toString(16).padStart(2, '0');
+    const gHex = g.toString(16).padStart(2, '0');
+    const rHex = r.toString(16).padStart(2, '0');
+    return `ff${bHex}${gHex}${rHex}`;
   }
 }

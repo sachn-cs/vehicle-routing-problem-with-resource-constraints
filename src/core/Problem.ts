@@ -91,7 +91,7 @@ export class Vehicle {
  * Main problem instance.
  */
 export class VrpProblem {
-  public readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
+  readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
 
   constructor(
     public readonly nodes: Readonly<Record<number, LocationNode>>,
@@ -112,12 +112,15 @@ export class VrpProblem {
     }
 
     for (const [, node] of nodeEntries) {
-      if (!node) continue; // eslint-disable-line @typescript-eslint/no-unnecessary-condition
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
-        throw new ValidationError(`Node ${node.id} has invalid coordinates: x=${node.x}, y=${node.y}`);
+        throw new ValidationError(
+          `Node ${node.id} has invalid coordinates: x=${node.x}, y=${node.y}`,
+        );
       }
       if (node.x < 0 || node.y < 0) {
-        throw new ValidationError(`Node ${node.id} has negative coordinates: x=${node.x}, y=${node.y}`);
+        throw new ValidationError(
+          `Node ${node.id} has negative coordinates: x=${node.x}, y=${node.y}`,
+        );
       }
     }
 
@@ -129,7 +132,8 @@ export class VrpProblem {
       customerIds.add(customer.id);
       if (!nodes[customer.deliveryNodeId]) {
         throw new ValidationError(
-          `Customer ${customer.id} references non-existent delivery node ${customer.deliveryNodeId}`,
+          `Customer ${customer.id} references non-existent ` +
+          `delivery node ${customer.deliveryNodeId}`,
         );
       }
       if (!nodes[customer.pickupNodeId]) {
@@ -138,7 +142,9 @@ export class VrpProblem {
         );
       }
       if (customer.processingTime < 0) {
-        throw new ValidationError(`Customer ${customer.id} has negative processingTime: ${customer.processingTime}`);
+        throw new ValidationError(
+          `Customer ${customer.id} has negative processingTime: ${customer.processingTime}`,
+        );
       }
     }
 
@@ -149,7 +155,9 @@ export class VrpProblem {
       }
       vehicleIds.add(vehicle.id);
       if (vehicle.capacity <= 0) {
-        throw new ValidationError(`Vehicle ${vehicle.id} must have positive capacity, got ${vehicle.capacity}`);
+        throw new ValidationError(
+          `Vehicle ${vehicle.id} must have positive capacity, got ${vehicle.capacity}`,
+        );
       }
     }
 
@@ -162,7 +170,8 @@ export class VrpProblem {
     const pickupNodeMap = new Map<number, Customer>();
     const nodeToCustomerIndex = new Map<number, number>();
     for (let i = 0; i < customers.length; i++) {
-      const c = customers[i]!;
+      const c = customers[i];
+      if (!c) continue;
       deliveryNodeMap.set(c.deliveryNodeId, c);
       pickupNodeMap.set(c.pickupNodeId, c);
       nodeToCustomerIndex.set(c.deliveryNodeId, i);
@@ -181,10 +190,10 @@ export class VrpProblem {
     this.distanceMatrix = this.calculateDistanceMatrix();
   }
 
-  public readonly deliveryNodeMap: ReadonlyMap<number, Customer>;
-  public readonly pickupNodeMap: ReadonlyMap<number, Customer>;
-  public readonly vehicleMap: ReadonlyMap<number, Vehicle>;
-  public readonly nodeToCustomerIndex: ReadonlyMap<number, number>;
+  readonly deliveryNodeMap: ReadonlyMap<number, Customer>;
+  readonly pickupNodeMap: ReadonlyMap<number, Customer>;
+  readonly vehicleMap: ReadonlyMap<number, Vehicle>;
+  readonly nodeToCustomerIndex: ReadonlyMap<number, number>;
 
   private calculateDistanceMatrix(): Record<number, Record<number, number>> {
     const matrix: Record<number, Record<number, number>> = {};
@@ -227,12 +236,4 @@ export class VrpProblem {
   }
 }
 
-/** @deprecated Use {@link LocationNode} instead. */
-export const Node = LocationNode;
-/** @deprecated Use {@link LocationNode} instead. */
-export type Node = LocationNode;
 
-/** @deprecated Use {@link VrpProblem} instead. */
-export const Problem = VrpProblem;
-/** @deprecated Use {@link VrpProblem} instead. */
-export type Problem = VrpProblem;

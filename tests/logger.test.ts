@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 
-import { ALNS } from '../src/algorithms/alns/ALNS.js';
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { ALNS } from '../src/algorithms/alns/alns.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
 import type { Logger } from '../src/logger.js';
 
 describe('Logger Injection', () => {

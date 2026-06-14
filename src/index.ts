@@ -1,79 +1,99 @@
 // Core (new names)
-export { VrpProblem, LocationNode, Customer, CustomerWithTimeWindows, Vehicle } from './core/Problem.js';
-export { VrpSolution, Route } from './core/Solution.js';
-export type { SerializedRoute, SerializedSolution } from './core/Solution.js';
-
-// Backward-compatible aliases
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export { Problem, Node } from './core/Problem.js';
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export { Solution } from './core/Solution.js';
+export {
+  VrpProblem,
+  LocationNode,
+  Customer,
+  CustomerWithTimeWindows,
+  Vehicle,
+} from './core/problem.js';
+export { VrpSolution, Route } from './core/solution.js';
+export type { SerializedRoute, SerializedSolution } from './core/solution.js';
 
 // Errors
-export { VrpError, ValidationError, InfeasibleSolutionError, AlgorithmConvergenceError } from './errors.js';
+export {
+  VrpError,
+  ValidationError,
+  InfeasibleSolutionError,
+  AlgorithmConvergenceError,
+} from './errors.js';
 
 // Logger
 export { defaultLogger, type Logger } from './logger.js';
 
 // Multi-depot support
-export { MultiDepotProblem, Depot } from './core/MultiDepotProblem.js';
+export { MultiDepotProblem, Depot } from './core/multi-depot-problem.js';
 
 // Traffic-aware routing
-export { TrafficAwareProblem, TrafficModel, type TrafficSegment } from './core/TrafficAwareProblem.js';
+export {
+  TrafficAwareProblem,
+  TrafficModel,
+  type TrafficSegment,
+} from './core/traffic-aware-problem.js';
 
 // Inter-vehicle resource transfer
 export {
   TransferManager,
   TransferHub,
   type ResourceTransfer,
-} from './core/ResourceTransfer.js';
+} from './core/resource-transfer.js';
 export {
   VehicleWithCapabilities,
   VehicleFleetManager,
   type ResourceType,
   type VehicleState,
-} from './core/VehicleWithCapabilities.js';
+} from './core/vehicle-with-capabilities.js';
 export {
   SolutionWithTransfers,
   ProblemWithTransfers,
-} from './core/SolutionWithTransfers.js';
+} from './core/solution-with-transfers.js';
 
 // Algorithms
-export { ALNS } from './algorithms/alns/ALNS.js';
-export type { ALNSOptions } from './algorithms/alns/ALNS.js';
-export { BRKGA } from './algorithms/brkga/BRKGA.js';
-export type { BRKGAOptions, Individual } from './algorithms/brkga/BRKGA.js';
-export type { Chromosome } from './algorithms/brkga/Decoder.js';
-export { TransferAwareInsertionOperators, TransferAwareRemovalOperators } from './algorithms/alns/TransferAwareOperators.js';
+export { ALNS } from './algorithms/alns/alns.js';
+export type { ALNSOptions } from './algorithms/alns/alns.js';
+export { BRKGA } from './algorithms/brkga/brkga.js';
+export type { BRKGAOptions, Individual } from './algorithms/brkga/brkga.js';
+export type { Chromosome } from './algorithms/brkga/decoder.js';
+export {
+  TransferAwareInsertionOperators,
+  TransferAwareRemovalOperators,
+} from './algorithms/alns/transfer-aware-operators.js';
 
 // Analytics
-export { RouteAnalytics } from './analytics/RouteAnalytics.js';
-export { SolutionComparator } from './analytics/SolutionComparator.js';
+export { RouteAnalytics } from './analytics/route-analytics.js';
+export { SolutionComparator } from './analytics/solution-comparator.js';
 export type {
   VehicleUtilization,
   WaitTimeAnalysis,
   LoadOverTime,
   RouteComparison,
-} from './analytics/RouteAnalytics.js';
-export type { SolutionMetrics, ComparisonResult, ParetoFront } from './analytics/SolutionComparator.js';
+} from './analytics/route-analytics.js';
+export type {
+  SolutionMetrics,
+  ComparisonResult,
+  ParetoFront,
+} from './analytics/solution-comparator.js';
 
 // Export
-export { GISExporter } from './export/GISExporter.js';
-export type { GeoJSON, GeoJSONFeature, KMLPlacemark } from './export/GISExporter.js';
+export { GISExporter } from './export/gis-exporter.js';
+export type { GeoJSON, GeoJSONFeature, KMLPlacemark } from './export/gis-exporter.js';
 
 // Main solver class
 import { resolve } from 'path';
 import { Worker } from 'worker_threads';
 
-import { ALNS } from './algorithms/alns/ALNS.js';
-import type { ALNSOptions, ALNSProgress } from './algorithms/alns/ALNS.js';
-import { BRKGA } from './algorithms/brkga/BRKGA.js';
-import type { BRKGAOptions, BRKGAProgress } from './algorithms/brkga/BRKGA.js';
-import type { VrpProblem } from './core/Problem.js';
-import { VrpSolution, Route } from './core/Solution.js';
+import type { ALNSOptions, ALNSProgress } from './algorithms/alns/alns.js';
+import { ALNS } from './algorithms/alns/alns.js';
+import { BRKGA } from './algorithms/brkga/brkga.js';
+import type { BRKGAOptions, BRKGAProgress } from './algorithms/brkga/brkga.js';
+import type { VrpProblem } from './core/problem.js';
+import { VrpSolution, Route } from './core/solution.js';
 import { AlgorithmConvergenceError } from './errors.js';
 import type { Logger } from './logger.js';
 import { defaultLogger } from './logger.js';
+
+function isWorkerResult(msg: object): msg is WorkerResult {
+  return 'makespan' in msg && 'routes' in msg && 'type' in msg;
+}
 
 // Worker path resolution
 const getWorkerPath = (): string => {
@@ -146,14 +166,15 @@ export class VrpRpdSolver {
 
     // Stage 1: ALNS
     this.logger.log('Starting Stage 1: ALNS...');
+    const reportAlns = options.onProgress;
     const alns = new ALNS(this.problem, {
       maxIterations: options.alnsIterations ?? 500,
       initialTemp: options.initialTemp ?? 100,
-      coolingRate: options.coolingRate ?? 0.9998,  // Paper spec
+      coolingRate: options.coolingRate ?? 0.9998,
       maxTimeMs: options.maxTimeMs ?? 0,
-      onProgress: options.onProgress
+      onProgress: reportAlns
         ? (progress: ALNSProgress) => {
-            options.onProgress!({
+            reportAlns({
               stage: 'ALNS',
               iteration: progress.iteration,
               maxIterations: progress.maxIterations,
@@ -174,16 +195,17 @@ export class VrpRpdSolver {
 
     // Stage 2: BRKGA with warm-start from ALNS
     this.logger.log('Starting Stage 2: BRKGA with warm-start...');
-    const warmStart = options.warmStart ?? true;  // Default: enabled (paper spec)
+    const warmStart = options.warmStart ?? true;
+    const reportBrkga = options.onProgress;
     const brkga = new BRKGA(this.problem, {
-      populationSize: options.populationSize ?? 30000,  // Paper spec
-      maxGenerations: options.maxGenerations ?? 20000,  // Paper spec
+      populationSize: options.populationSize ?? 30000,
+      maxGenerations: options.maxGenerations ?? 20000,
       warmStartSolution: warmStart ? alnsSolution : undefined,
-      warmStartProportion: 0.15,  // Paper spec: 15% warm-start
+      warmStartProportion: 0.15,
       maxTimeMs: options.maxTimeMs ?? 0,
-      onProgress: options.onProgress
+      onProgress: reportBrkga
         ? (progress: BRKGAProgress) => {
-            options.onProgress!({
+            reportBrkga({
               stage: 'BRKGA',
               iteration: progress.generation,
               maxIterations: progress.maxGenerations,
@@ -221,7 +243,8 @@ export class VrpRpdSolver {
     results.sort((a, b) => a.makespan - b.makespan);
 
     this.logger.log(
-      `Parallel Solving completed. Best makespan: ${results[0]!.makespan.toFixed(2)} (${results[0]!.type})`,
+      `Parallel Solving completed. Best makespan: ` +
+        `${results[0]!.makespan.toFixed(2)} (${results[0]!.type})`,
     );
 
     const best = results[0];
@@ -236,7 +259,10 @@ export class VrpRpdSolver {
     return solution;
   }
 
-  protected runWorker(type: 'ALNS' | 'BRKGA', options: ALNSOptions | BRKGAOptions): Promise<WorkerResult> {
+  protected runWorker(
+    type: 'ALNS' | 'BRKGA',
+    options: ALNSOptions | BRKGAOptions,
+  ): Promise<WorkerResult> {
     return new Promise((resolveResult, reject) => {
       const worker = new Worker(getWorkerPath(), {
         workerData: {
@@ -250,29 +276,35 @@ export class VrpRpdSolver {
       });
 
       let settled = false;
-      worker.on('message', msg => {
+      worker.on('message', (msg: unknown) => {
         if (!settled) {
           settled = true;
-          worker.terminate().catch(() => {});
-          if (msg && typeof msg === 'object' && 'error' in msg) {
-            const errorMsg = (msg as Record<string, unknown>)['error'];
-            reject(new AlgorithmConvergenceError(`Worker ${type} failed: ${String(errorMsg)}`));
+          void worker.terminate();
+          if (typeof msg === 'object' && msg !== null) {
+            if ('error' in msg) {
+              const errMsg = typeof msg.error === 'string' ? msg.error : 'Unknown error';
+              reject(new AlgorithmConvergenceError(`Worker ${type} failed: ${errMsg}`));
+            } else if (isWorkerResult(msg)) {
+              resolveResult(msg);
+            } else {
+              reject(new AlgorithmConvergenceError(`Worker ${type} returned unexpected result`));
+            }
           } else {
-            resolveResult(msg as WorkerResult);
+            reject(new AlgorithmConvergenceError(`Worker ${type} returned non-object result`));
           }
         }
       });
       worker.on('error', err => {
         if (!settled) {
           settled = true;
-          worker.terminate().catch(() => {});
+          void worker.terminate();
           reject(new AlgorithmConvergenceError(`Worker ${type} error: ${err.message}`));
         }
       });
       worker.on('exit', code => {
         if (!settled) {
           settled = true;
-          worker.terminate().catch(() => {});
+          void worker.terminate();
           if (code !== 0) {
             reject(new AlgorithmConvergenceError(`Worker stopped with exit code ${code}`));
           } else {

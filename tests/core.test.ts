@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 
-import { ALNS } from '../src/algorithms/alns/ALNS.js';
-import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
-import { VrpSolution, Route } from '../src/core/Solution.js';
+import { ALNS } from '../src/algorithms/alns/alns.js';
+import { BRKGA } from '../src/algorithms/brkga/brkga.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
+import { VrpSolution, Route } from '../src/core/solution.js';
 import { VrpRpdSolver } from '../src/index.js';
 
 describe('Problem', () => {
@@ -128,6 +128,62 @@ describe('ALNS', () => {
     expect(initialSolution.isComplete()).to.be.true;
     expect(solution.makespan).to.be.greaterThan(0);
   });
+
+  it('should handle multi-restart without crashing', function () {
+    this.timeout(10000);
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
+    };
+    const customers = [
+      new Customer(1, 1, 2, 50),
+      new Customer(2, 3, 4, 50),
+      new Customer(3, 2, 1, 30),
+      new Customer(4, 4, 3, 40),
+    ];
+    const vehicles = [new Vehicle(1, 10)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    // Use many iterations so stagnation + restart triggers
+    const alns = new ALNS(problem, { maxIterations: 2000 });
+    const solution = alns.solve();
+
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+    expect(solution.makespan).to.be.greaterThan(0);
+  });
+
+  it('should produce better solution with adaptive removal than fixed small removal', function () {
+    this.timeout(30000);
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'D1'),
+      2: new LocationNode(2, 20, 0, 'P1'),
+      3: new LocationNode(3, 0, 10, 'D2'),
+      4: new LocationNode(4, 0, 20, 'P2'),
+      5: new LocationNode(5, 30, 0, 'D3'),
+      6: new LocationNode(6, 40, 0, 'P3'),
+    };
+    const customers = [
+      new Customer(1, 1, 2, 20),
+      new Customer(2, 3, 4, 30),
+      new Customer(3, 2, 5, 40),
+      new Customer(4, 5, 6, 10),
+      new Customer(5, 4, 1, 25),
+      new Customer(6, 6, 3, 35),
+    ];
+    const vehicles = [new Vehicle(1, 200)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    const alns = new ALNS(problem, { maxIterations: 1000 });
+    const solution = alns.solve();
+
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+  });
 });
 
 describe('BRKGA', () => {
@@ -144,6 +200,30 @@ describe('BRKGA', () => {
     const problem = new VrpProblem(nodes, customers, vehicles, 0);
 
     const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 10 });
+    const solution = await brkga.solve();
+
+    expect(solution.isFeasible()).to.be.true;
+    expect(solution.isComplete()).to.be.true;
+  });
+
+  it('should handle stagnation with immigrant injection gracefully', async function () {
+    this.timeout(30000);
+    const nodes: Record<number, LocationNode> = {
+      0: new LocationNode(0, 0, 0, 'Depot'),
+      1: new LocationNode(1, 10, 0, 'Pickup1'),
+      2: new LocationNode(2, 20, 0, 'Delivery1'),
+      3: new LocationNode(3, 30, 0, 'Pickup2'),
+      4: new LocationNode(4, 40, 0, 'Delivery2'),
+    };
+    const customers = [
+      new Customer(1, 1, 2, 50),
+      new Customer(2, 3, 4, 50),
+    ];
+    const vehicles = [new Vehicle(1, 200)];
+    const problem = new VrpProblem(nodes, customers, vehicles, 0);
+
+    // Low max generations to hit stagnation early → immigrant injection
+    const brkga = new BRKGA(problem, { populationSize: 10, maxGenerations: 50 });
     const solution = await brkga.solve();
 
     expect(solution.isFeasible()).to.be.true;

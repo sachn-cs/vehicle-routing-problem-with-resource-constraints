@@ -1,4 +1,4 @@
-import type { LocationNode, Customer, Vehicle } from './Problem.js';
+import type { LocationNode, Customer, Vehicle } from './problem.js';
 
 /**
  * Represents a depot where vehicles can start and end their routes.
@@ -23,7 +23,7 @@ export class Depot {
  * Vehicles can start and end at different depots.
  */
 export class MultiDepotProblem {
-  public readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
+  readonly distanceMatrix: Readonly<Record<number, Readonly<Record<number, number>>>>;
 
   /**
    * @param nodes - Available nodes by ID

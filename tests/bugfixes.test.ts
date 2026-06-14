@@ -1,20 +1,20 @@
 import { expect } from 'chai';
 
-import { ALNS } from '../src/algorithms/alns/ALNS.js';
+import { ALNS } from '../src/algorithms/alns/alns.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
-import { TransferAwareInsertionOperators } from '../src/algorithms/alns/TransferAwareOperators.js';
-import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { VrpProblem, LocationNode, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/Problem.js';
-import type { ResourceTransfer } from '../src/core/ResourceTransfer.js';
-import { TransferManager, TransferHub } from '../src/core/ResourceTransfer.js';
-import { VrpSolution, Route } from '../src/core/Solution.js';
+import { TransferAwareInsertionOperators } from '../src/algorithms/alns/transfer-aware-operators.js';
+import { BRKGA } from '../src/algorithms/brkga/brkga.js';
+import { VrpProblem, LocationNode, Customer, Vehicle, CustomerWithTimeWindows } from '../src/core/problem.js';
+import type { ResourceTransfer } from '../src/core/resource-transfer.js';
+import { TransferManager, TransferHub } from '../src/core/resource-transfer.js';
 import {
   SolutionWithTransfers,
   ProblemWithTransfers,
-} from '../src/core/SolutionWithTransfers.js';
-import { TrafficAwareProblem, TrafficModel } from '../src/core/TrafficAwareProblem.js';
-import { VehicleWithCapabilities } from '../src/core/VehicleWithCapabilities.js';
-import { GISExporter } from '../src/export/GISExporter.js';
+} from '../src/core/solution-with-transfers.js';
+import { VrpSolution, Route } from '../src/core/solution.js';
+import { TrafficAwareProblem, TrafficModel } from '../src/core/traffic-aware-problem.js';
+import { VehicleWithCapabilities } from '../src/core/vehicle-with-capabilities.js';
+import { GISExporter } from '../src/export/gis-exporter.js';
 
 // ============================================================
 // C1: totalCost / totalCO2 must be per-route, per-vehicle
@@ -395,8 +395,9 @@ describe('C10 - ALNS selectOperator zero-weight safety', () => {
     const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
     const alns = new ALNS(problem, { maxIterations: 2 });
 
-    // Access protected method via type assertion for testing
-    const idx = (alns as unknown as { selectOperator: (weights: number[]) => number }).selectOperator([0, 0, 0]);
+    // Access protected method for testing
+    // @ts-expect-error - accessing protected method for test
+    const idx = alns.selectOperator([0, 0, 0]);
     expect(idx).to.be.at.least(0);
     expect(idx).to.be.at.most(2);
   });

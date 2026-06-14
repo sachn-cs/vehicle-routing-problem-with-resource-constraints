@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
-import { VrpSolution, Route } from '../src/core/Solution.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
+import { VrpSolution, Route } from '../src/core/solution.js';
 import { ValidationError } from '../src/errors.js';
 
 describe('Edge Cases', () => {

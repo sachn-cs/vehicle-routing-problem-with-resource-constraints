@@ -1,18 +1,18 @@
-import { VrpProblem } from './Problem.js';
-import type { Customer, LocationNode } from './Problem.js';
-import { TransferManager } from './ResourceTransfer.js';
-import type { ResourceTransfer , TransferHub } from './ResourceTransfer.js';
-import { VrpSolution } from './Solution.js';
-import type { Route } from './Solution.js';
-import { VehicleWithCapabilities, VehicleFleetManager } from './VehicleWithCapabilities.js';
+import { VrpProblem } from './problem.js';
+import type { Customer, LocationNode } from './problem.js';
+import { TransferManager } from './resource-transfer.js';
+import type { ResourceTransfer , TransferHub } from './resource-transfer.js';
+import { VrpSolution } from './solution.js';
+import type { Route } from './solution.js';
+import { VehicleWithCapabilities, VehicleFleetManager } from './vehicle-with-capabilities.js';
 
 /**
  * Extended solution with inter-vehicle resource transfers.
  */
 export class SolutionWithTransfers extends VrpSolution {
-  public readonly transferManager: TransferManager;
-  public readonly fleetManager: VehicleFleetManager;
-  public transfers: ResourceTransfer[] = [];
+  readonly transferManager: TransferManager;
+  readonly fleetManager: VehicleFleetManager;
+  transfers: ResourceTransfer[] = [];
 
   /**
    * @param problem - Base problem instance
@@ -29,9 +29,12 @@ export class SolutionWithTransfers extends VrpSolution {
     super(problem, routes);
 
     this.transferManager = new TransferManager();
-    this.fleetManager = new VehicleFleetManager(
-      vehicles.length > 0 ? vehicles : problem.vehicles as VehicleWithCapabilities[],
-    );
+    const fleetVehicles = vehicles.length > 0
+      ? vehicles
+      : problem.vehicles.filter(
+          (v): v is VehicleWithCapabilities => v instanceof VehicleWithCapabilities,
+        );
+    this.fleetManager = new VehicleFleetManager(fleetVehicles);
 
     // Register transfer hubs
     for (const hub of transferHubs) {
@@ -102,18 +105,26 @@ export class SolutionWithTransfers extends VrpSolution {
       }
 
       // Check vehicle compatibility
-      if (fromVehicle instanceof VehicleWithCapabilities && toVehicle instanceof VehicleWithCapabilities) {
+      if (
+        fromVehicle instanceof VehicleWithCapabilities &&
+        toVehicle instanceof VehicleWithCapabilities
+      ) {
         if (!fromVehicle.canTransferWith(toVehicle)) {
           errors.push(
-            `Transfer ${transfer.id}: Vehicles ${transfer.fromVehicleId} and ${transfer.toVehicleId} cannot transfer`,
+            `Transfer ${transfer.id}: Vehicles ` +
+            `${transfer.fromVehicleId} and ${transfer.toVehicleId} cannot transfer`,
           );
         }
       }
 
       // Check transfer amount
-      if (fromVehicle instanceof VehicleWithCapabilities && transfer.amount > fromVehicle.maxTransferAmount) {
+      if (
+        fromVehicle instanceof VehicleWithCapabilities &&
+        transfer.amount > fromVehicle.maxTransferAmount
+      ) {
         errors.push(
-          `Transfer ${transfer.id}: Amount ${transfer.amount} exceeds max transfer ${fromVehicle.maxTransferAmount}`,
+          `Transfer ${transfer.id}: Amount ${transfer.amount} ` +
+          `exceeds max transfer ${fromVehicle.maxTransferAmount}`,
         );
       }
     }

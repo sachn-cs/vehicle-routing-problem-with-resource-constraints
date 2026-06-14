@@ -46,7 +46,10 @@ export class TransferHub {
 export class TransferManager {
   private readonly transfers: Map<string, ResourceTransfer> = new Map();
   private readonly hubs: Map<number, TransferHub> = new Map();
-  private readonly vehicleSchedules: Map<number, Array<{ startTime: number; endTime: number; hubId: number }>> = new Map();
+  private readonly vehicleSchedules: Map<
+    number,
+    Array<{ startTime: number; endTime: number; hubId: number }>
+  > = new Map();
 
   registerHub(hub: TransferHub): void {
     this.hubs.set(hub.id, hub);

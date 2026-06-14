@@ -1,9 +1,9 @@
-import type { VrpProblem, Customer, CustomerWithTimeWindows } from './Problem.js';
+import type { VrpProblem, Customer, CustomerWithTimeWindows } from './problem.js';
 
 /**
  * Type guard to check if a customer has time windows.
  */
-function isCustomerWithTimeWindows(customer: Customer): customer is CustomerWithTimeWindows {
+export function isCustomerWithTimeWindows(customer: Customer): customer is CustomerWithTimeWindows {
   return 'earliestDeliveryTime' in customer;
 }
 
@@ -12,7 +12,7 @@ function isCustomerWithTimeWindows(customer: Customer): customer is CustomerWith
  * Contains a sequence of operations (delivery or pickup).
  */
 export class Route {
-  public readonly nodes: number[];
+  readonly nodes: number[];
 
   /**
    * @param vehicleId - ID of the vehicle assigned to this route
@@ -49,13 +49,13 @@ export class Route {
  * Represents a full solution to the VRP-RPD problem.
  */
 export class VrpSolution {
-  public routes: Route[];
-  public makespan: number;
-  public nodeTimes: Record<number | string, number>;
-  public resourceReadyTimes: Record<number, number>;
-  public totalDistance: number;
-  public totalCost: number;
-  public totalCO2: number;
+  routes: Route[];
+  makespan: number;
+  nodeTimes: Record<number | string, number>;
+  resourceReadyTimes: Record<number, number>;
+  totalDistance: number;
+  totalCost: number;
+  totalCO2: number;
 
   /**
    * @param problem - VrpProblem instance this solution solves
@@ -136,7 +136,8 @@ export class VrpSolution {
             changed = true;
 
             if (deliveryCustomer) {
-              resourceReadyTimes[deliveryCustomer.id] = arrivalTime + deliveryCustomer.processingTime;
+              resourceReadyTimes[deliveryCustomer.id] =
+                arrivalTime + deliveryCustomer.processingTime;
             }
           }
 
@@ -211,7 +212,11 @@ export class VrpSolution {
     route: Route,
     baseResourceReadyTimes: Record<number, number>,
     nodeReadyTimes?: Record<number, number>,
-  ): { returnTime: number; updatedReadyTimes: Record<number, number>; nodeArrivalTimes: Record<number, number> } {
+  ): {
+    returnTime: number;
+    updatedReadyTimes: Record<number, number>;
+    nodeArrivalTimes: Record<number, number>;
+  } {
     const vehicle = this.problem.vehicleMap.get(route.vehicleId);
     const startDepot = vehicle?.startDepotId ?? this.problem.depotNodeId;
     const endDepot = vehicle?.endDepotId ?? this.problem.depotNodeId;
@@ -263,22 +268,39 @@ export class VrpSolution {
 
   /**
    * Computes makespan if `routeIndex` is replaced with `newRoute`.
-   * Uses current route return times for all other routes.
+   * Properly cascades resource ready time updates to affected routes.
    */
   evaluateMakespanWithRoute(routeIndex: number, newRoute: Route): number {
-    const { returnTime } = this.evaluateRouteReturnTime(newRoute, this.resourceReadyTimes);
+    const { returnTime, updatedReadyTimes } = this.evaluateRouteReturnTime(
+      newRoute,
+      this.resourceReadyTimes,
+    );
     let maxReturn = returnTime;
     for (let i = 0; i < this.routes.length; i++) {
       if (i === routeIndex) continue;
-      const key = `depot_return_${i}`;
-      const rt = this.nodeTimes[key] ?? 0;
-      if (rt > maxReturn) maxReturn = rt;
+      const existingRoute = this.routes[i];
+      if (!existingRoute) continue;
+      if (
+        this.routeIsAffectedByResourceUpdate(
+          existingRoute,
+          updatedReadyTimes,
+          this.resourceReadyTimes,
+        )
+      ) {
+        const { returnTime: rt2 } = this.evaluateRouteReturnTime(existingRoute, updatedReadyTimes);
+        if (rt2 > maxReturn) maxReturn = rt2;
+      } else {
+        const key = `depot_return_${i}`;
+        const rt = this.nodeTimes[key] ?? 0;
+        if (rt > maxReturn) maxReturn = rt;
+      }
     }
     return maxReturn;
   }
 
   /**
    * Computes makespan when two routes are replaced (for transfer scenarios).
+   * Cascades resource updates from route A through route B to all other routes.
    */
   evaluateMakespanWithTwoRoutes(
     routeIndexA: number,
@@ -287,27 +309,57 @@ export class VrpSolution {
     newRouteB: Route,
     hubNodeId: number,
   ): { makespan: number; hubReadyTime: number } {
-    const { returnTime: returnA, nodeArrivalTimes } = this.evaluateRouteReturnTime(
+    const {
+      returnTime: returnA,
+      nodeArrivalTimes,
+      updatedReadyTimes: readyA,
+    } = this.evaluateRouteReturnTime(
       newRouteA,
       this.resourceReadyTimes,
     );
 
     const hubReadyTime = nodeArrivalTimes[hubNodeId] ?? 0;
 
-    const { returnTime: returnB } = this.evaluateRouteReturnTime(
+    const { returnTime: returnB, updatedReadyTimes: readyB } = this.evaluateRouteReturnTime(
       newRouteB,
-      this.resourceReadyTimes,
+      readyA,
       { [hubNodeId]: hubReadyTime },
     );
 
     let maxReturn = Math.max(returnA, returnB);
     for (let i = 0; i < this.routes.length; i++) {
       if (i === routeIndexA || i === routeIndexB) continue;
-      const key = `depot_return_${i}`;
-      const rt = this.nodeTimes[key] ?? 0;
-      if (rt > maxReturn) maxReturn = rt;
+      const existingRoute = this.routes[i];
+      if (!existingRoute) continue;
+      if (this.routeIsAffectedByResourceUpdate(existingRoute, readyB, this.resourceReadyTimes)) {
+        const { returnTime: rt2 } = this.evaluateRouteReturnTime(existingRoute, readyB);
+        if (rt2 > maxReturn) maxReturn = rt2;
+      } else {
+        const key = `depot_return_${i}`;
+        const rt = this.nodeTimes[key] ?? 0;
+        if (rt > maxReturn) maxReturn = rt;
+      }
     }
     return { makespan: maxReturn, hubReadyTime };
+  }
+
+  /**
+   * Checks whether a route contains pickups for customers whose resource ready time has changed.
+   */
+  private routeIsAffectedByResourceUpdate(
+    route: Route,
+    updatedReadyTimes: Record<number, number>,
+    baseReadyTimes: Record<number, number>,
+  ): boolean {
+    for (const nodeId of route.nodes) {
+      const customer = this.problem.pickupNodeMap.get(nodeId);
+      if (customer && customer.id in updatedReadyTimes) {
+        if (updatedReadyTimes[customer.id] !== baseReadyTimes[customer.id]) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private calculateTotalDistance(): number {
@@ -474,7 +526,4 @@ export interface SerializedSolution {
   resourceReadyTimes: Record<number, number>;
 }
 
-/** @deprecated Use {@link VrpSolution} instead. */
-export const Solution = VrpSolution;
-/** @deprecated Use {@link VrpSolution} instead. */
-export type Solution = VrpSolution;
+

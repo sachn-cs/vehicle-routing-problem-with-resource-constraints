@@ -1,7 +1,7 @@
 import type { Worker } from 'worker_threads';
 
-import type { Individual } from './BRKGA.js';
-import type { Chromosome } from './Decoder.js';
+import type { Individual } from './brkga.js';
+import type { Chromosome } from './decoder.js';
 
 export interface IslandCheckpointMessage {
   type: 'checkpoint';
@@ -34,6 +34,16 @@ export interface FinishCommand {
 
 export type IslandCommand = EvolveCommand | InjectCommand | FinishCommand;
 
+function isIslandWorkerMessage(msg: unknown): msg is IslandWorkerMessage {
+  if (typeof msg !== 'object' || msg === null || !('type' in msg)) return false;
+  if (typeof msg.type !== 'string') return false;
+  if (msg.type === 'checkpoint') {
+    return 'islandId' in msg && 'generation' in msg && 'population' in msg;
+  }
+  if (msg.type === 'finish') return 'islandId' in msg && 'bestIndividual' in msg;
+  return false;
+}
+
 /**
  * Sends a command to a worker and awaits its response.
  */
@@ -43,7 +53,11 @@ export function sendCommand(worker: Worker, cmd: IslandCommand): Promise<IslandW
       worker.off('message', onMessage);
       worker.off('error', onError);
       worker.off('exit', onExit);
-      resolve(msg as IslandWorkerMessage);
+      if (isIslandWorkerMessage(msg)) {
+        resolve(msg);
+      } else {
+        reject(new Error('Invalid worker message'));
+      }
     };
     const onError = (err: Error) => {
       worker.off('message', onMessage);

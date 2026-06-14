@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 
-import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { BRKGA } from '../src/algorithms/brkga/brkga.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
 
 const makeProblem = () => {
   const nodes = {
@@ -66,7 +66,7 @@ describe('Island-Model BRKGA', () => {
 
   it('warm-start works with islands', async () => {
     const problem = makeProblem();
-    const { ALNS } = await import('../src/algorithms/alns/ALNS.js');
+    const { ALNS } = await import('../src/algorithms/alns/alns.js');
     const alns = new ALNS(problem, { maxIterations: 5 });
     const warmStart = alns.solve();
 

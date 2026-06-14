@@ -1,4 +1,4 @@
-import { Vehicle } from './Problem.js';
+import { Vehicle } from './problem.js';
 
 /**
  * Types of resources a vehicle can handle.
@@ -147,7 +147,8 @@ export class VehicleFleetManager {
     // Validate capacity
     if (state.currentLoad < 0 || state.currentLoad > vehicle.capacity) {
       throw new Error(
-        `Vehicle ${vehicleId} capacity violation: load=${state.currentLoad}, capacity=${vehicle.capacity}`,
+        `Vehicle ${vehicleId} capacity violation: ` +
+        `load=${state.currentLoad}, capacity=${vehicle.capacity}`,
       );
     }
 

@@ -1,14 +1,14 @@
 import { resolve } from 'path';
 import { Worker } from 'worker_threads';
 
-import type { VrpProblem } from '../../core/Problem.js';
-import type { VrpSolution } from '../../core/Solution.js';
+import type { VrpProblem } from '../../core/problem.js';
+import type { VrpSolution } from '../../core/solution.js';
 import { ValidationError } from '../../errors.js';
 import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
 
-import { Decoder, type Chromosome } from './Decoder.js';
-import { sendCommand } from './IslandMessenger.js';
+import { Decoder, type Chromosome } from './decoder.js';
+import { sendCommand } from './island-messenger.js';
 
 export interface BRKGAProgress {
   generation: number;
@@ -86,19 +86,31 @@ export class BRKGA {
     if (options.populationSize !== undefined && options.populationSize < 1) {
       throw new ValidationError('Population size must be a positive integer');
     }
-    if (options.eliteFraction !== undefined && (options.eliteFraction <= 0 || options.eliteFraction >= 1)) {
+    if (
+      options.eliteFraction !== undefined &&
+      (options.eliteFraction <= 0 || options.eliteFraction >= 1)
+    ) {
       throw new ValidationError('Elite fraction must be between 0 and 1 (exclusive)');
     }
-    if (options.mutantFraction !== undefined && (options.mutantFraction <= 0 || options.mutantFraction >= 1)) {
+    if (
+      options.mutantFraction !== undefined &&
+      (options.mutantFraction <= 0 || options.mutantFraction >= 1)
+    ) {
       throw new ValidationError('Mutant fraction must be between 0 and 1 (exclusive)');
     }
-    if (options.crossoverProb !== undefined && (options.crossoverProb < 0 || options.crossoverProb > 1)) {
+    if (
+      options.crossoverProb !== undefined &&
+      (options.crossoverProb < 0 || options.crossoverProb > 1)
+    ) {
       throw new ValidationError('Crossover probability must be between 0 and 1');
     }
     if (options.maxGenerations !== undefined && options.maxGenerations < 1) {
       throw new ValidationError('Max generations must be a positive integer');
     }
-    if (options.warmStartProportion !== undefined && (options.warmStartProportion <= 0 || options.warmStartProportion >= 1)) {
+    if (
+      options.warmStartProportion !== undefined &&
+      (options.warmStartProportion <= 0 || options.warmStartProportion >= 1)
+    ) {
       throw new ValidationError('Warm-start proportion must be between 0 and 1 (exclusive)');
     }
     if (options.islands !== undefined && options.islands < 1) {
@@ -107,7 +119,10 @@ export class BRKGA {
     if (options.migrationInterval !== undefined && options.migrationInterval < 1) {
       throw new ValidationError('migrationInterval must be a positive integer');
     }
-    if (options.migrantFraction !== undefined && (options.migrantFraction <= 0 || options.migrantFraction >= 1)) {
+    if (
+      options.migrantFraction !== undefined &&
+      (options.migrantFraction <= 0 || options.migrantFraction >= 1)
+    ) {
       throw new ValidationError('migrantFraction must be between 0 and 1 (exclusive)');
     }
 
@@ -129,7 +144,8 @@ export class BRKGA {
     this.migrantFraction = options.migrantFraction ?? 0.05;
 
     this.decoder = new Decoder(problem);
-    this.chromosomeSize = problem.customers.length; // n genes per component; 4 components = 4n total
+    this.chromosomeSize = problem.customers.length;
+    // n genes per component; 4 components = 4n total
   }
 
   /**
@@ -189,10 +205,10 @@ export class BRKGA {
     const n = this.chromosomeSize;
     const child: Individual = {
       chromosome: {
-        priorities: new Array<number>(n),
-        assignments: new Array<number>(n),
-        dependencies: new Array<number>(n),
-        transfers: new Array<number>(n),
+        priorities: Array.from<number>({ length: n }),
+        assignments: Array.from<number>({ length: n }),
+        dependencies: Array.from<number>({ length: n }),
+        transfers: Array.from<number>({ length: n }),
       },
       fitness: null,
       solution: null,
@@ -220,22 +236,34 @@ export class BRKGA {
   /**
    * Evolves one generation of the population.
    * @param population - Current population (already evaluated and sorted)
+   * @param stagnationRatio - 0..1 indicating how long since last improvement
    * @returns Next generation population
    */
-  evolvePopulation(population: Individual[]): Individual[] {
+  evolvePopulation(population: Individual[], stagnationRatio: number = 0): Individual[] {
     const nextPopulation: Individual[] = [];
 
-    // Elite preservation
     const eliteCount = Math.floor(this.populationSize * this.eliteFraction);
+
+    // Elite preservation with mild mutation for diversity
+    const eliteMutationRate = Math.min(0.05, stagnationRatio * 0.1);
     for (let i = 0; i < eliteCount; i++) {
       const elite = population[i];
-      if (elite) {
-        nextPopulation.push({ ...elite });
-      }
+      if (!elite) continue;
+      const mutated = eliteMutationRate > 0;
+      nextPopulation.push({
+        ...elite,
+        chromosome: mutated
+          ? this.mutateChromosome(elite.chromosome, eliteMutationRate)
+          : { ...elite.chromosome },
+        fitness: mutated ? null : elite.fitness,
+        solution: mutated ? null : elite.solution,
+      });
     }
 
-    // Mutants (random individuals)
-    const mutantCount = Math.floor(this.populationSize * this.mutantFraction);
+    // Mutants + immigrants (more mutants when stagnant)
+    const baseMutantCount = Math.floor(this.populationSize * this.mutantFraction);
+    const extraMutants = Math.floor(stagnationRatio * this.populationSize * 0.05);
+    const mutantCount = Math.min(baseMutantCount + extraMutants, this.populationSize - eliteCount);
     for (let i = 0; i < mutantCount; i++) {
       nextPopulation.push(this.randomIndividual());
     }
@@ -258,7 +286,7 @@ export class BRKGA {
 
   protected runSingleIsland(startTime: number): VrpSolution {
     let population = this.initializePopulation();
-    let bestIndividual: Individual | null = null;
+    let hallOfFame: Individual | null = null;
     let generationsWithoutImprovement = 0;
     const maxStagnantGenerations = Math.floor(this.maxGenerations * 0.1);
 
@@ -281,11 +309,11 @@ export class BRKGA {
       const top = population[0];
       const topFitness = top?.fitness ?? Infinity;
       if (
-        !bestIndividual ||
-        (bestIndividual.fitness !== null && topFitness < bestIndividual.fitness)
+        !hallOfFame ||
+        (hallOfFame.fitness !== null && topFitness < hallOfFame.fitness)
       ) {
         if (!top) continue;
-        bestIndividual = {
+        hallOfFame = {
           chromosome: {
             priorities: [...top.chromosome.priorities],
             assignments: [...top.chromosome.assignments],
@@ -301,29 +329,36 @@ export class BRKGA {
       }
 
       if (generationsWithoutImprovement >= maxStagnantGenerations) {
-        break;
+        // Inject fresh random individuals before giving up
+        const injectionCount = Math.floor(this.populationSize * 0.2);
+        for (let i = 0; i < injectionCount; i++) {
+          population[population.length - 1 - i] = this.randomIndividual();
+        }
+        generationsWithoutImprovement = Math.floor(maxStagnantGenerations * 0.8);
+        continue;
       }
 
-      population = this.evolvePopulation(population);
+      const stagnationRatio = Math.min(1, generationsWithoutImprovement / maxStagnantGenerations);
+      population = this.evolvePopulation(population, stagnationRatio);
 
       if (this.onProgress && g % 100 === 0) {
         this.onProgress({
           generation: g,
           maxGenerations: this.maxGenerations,
-          bestMakespan: bestIndividual.fitness ?? Infinity,
+          bestMakespan: hallOfFame.fitness ?? Infinity,
           populationSize: this.populationSize,
         });
       }
 
       if (g % 10 === 0) {
         this.logger.log(
-          `BRKGA Gen ${g}: Best makespan = ${(bestIndividual.fitness ?? Infinity).toFixed(2)}`,
+          `BRKGA Gen ${g}: Best makespan = ${(hallOfFame.fitness ?? Infinity).toFixed(2)}`,
         );
       }
     }
 
     return (
-      bestIndividual?.solution ?? this.decoder.decode(this.randomIndividual().chromosome)
+      hallOfFame?.solution ?? this.decoder.decode(this.randomIndividual().chromosome)
     );
   }
 
@@ -389,7 +424,10 @@ export class BRKGA {
             if (
               islandBest &&
               (globalBest === null ||
-                (islandBest.fitness !== null && islandBest.fitness < (globalBest.fitness ?? Infinity)))
+                (
+                islandBest.fitness !== null &&
+                islandBest.fitness < (globalBest.fitness ?? Infinity)
+              ))
             ) {
               globalBest = {
                 chromosome: {
@@ -436,18 +474,18 @@ export class BRKGA {
 
         for (let i = allMigrants.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          const temp = allMigrants[i];
-          allMigrants[i] = allMigrants[j] as Chromosome;
-          allMigrants[j] = temp as Chromosome;
+          const temp = allMigrants[i]!;
+          allMigrants[i] = allMigrants[j]!;
+          allMigrants[j] = temp;
         }
 
         const migrantsPerIsland = Math.max(1, Math.floor(allMigrants.length / this.islands));
         const injectPromises: Promise<unknown>[] = [];
-        for (let i = 0; i < this.islands; i++) {
+        workers.forEach((worker, i) => {
           const startIdx = i * migrantsPerIsland;
           const slice = allMigrants.slice(startIdx, startIdx + migrantsPerIsland);
-          injectPromises.push(sendCommand(workers[i] as Worker, { type: 'inject', migrants: slice }));
-        }
+          injectPromises.push(sendCommand(worker, { type: 'inject', migrants: slice }));
+        });
         await Promise.all(injectPromises);
       }
 
@@ -468,16 +506,17 @@ export class BRKGA {
       }
     } catch (err) {
       this.logger.log(
-        `Island BRKGA worker failed: ${err instanceof Error ? err.message : String(err)}. Falling back to single-island.`,
+        `Island BRKGA worker failed: ${err instanceof Error ? err.message : String(err)}. ` +
+        `Falling back to single-island.`,
       );
       for (const w of workers) {
-        w.terminate().catch(() => {});
+        void w.terminate();
       }
       return this.runSingleIsland(startTime);
     }
 
     for (const w of workers) {
-      w.terminate().catch(() => {});
+      void w.terminate();
     }
 
     return (

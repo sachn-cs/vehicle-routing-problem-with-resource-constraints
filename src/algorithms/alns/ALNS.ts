@@ -1,10 +1,17 @@
-import type { VrpProblem } from '../../core/Problem.js';
-import { VrpSolution, Route } from '../../core/Solution.js';
+import type { VrpProblem } from '../../core/problem.js';
+import { VrpSolution, Route } from '../../core/solution.js';
 import { ValidationError } from '../../errors.js';
 import type { Logger } from '../../logger.js';
 import { defaultLogger } from '../../logger.js';
 
-import { RemovalOperators, InsertionOperators } from './operators.js';
+import {
+  RemovalOperators,
+  InsertionOperators,
+  REMOVAL_OPERATOR_KEYS,
+  INSERTION_OPERATOR_KEYS,
+  type RemovalOperatorKey,
+  type InsertionOperatorKey,
+} from './operators.js';
 
 export interface ALNSProgress {
   iteration: number;
@@ -44,7 +51,7 @@ export class ALNS {
   protected readonly problem: VrpProblem;
   protected readonly maxIterations: number;
   protected readonly initialTemp: number;
-  protected readonly coolingRate: number;
+  protected coolingRate: number;
   protected readonly segmentSize: number;
 
   // Paper-specific scores
@@ -52,8 +59,8 @@ export class ALNS {
   protected readonly scoreBetter: number;
   protected readonly scoreAccepted: number;
 
-  protected removalOps: string[];
-  protected insertionOps: string[];
+  protected removalOps: RemovalOperatorKey[];
+  protected insertionOps: InsertionOperatorKey[];
   protected removalWeights: number[];
   protected insertionWeights: number[];
   protected scores: { removal: number[]; insertion: number[] };
@@ -76,7 +83,10 @@ export class ALNS {
     if (options.maxIterations !== undefined && options.maxIterations < 1) {
       throw new ValidationError('Max iterations must be a positive integer');
     }
-    if (options.coolingRate !== undefined && (options.coolingRate <= 0 || options.coolingRate >= 1)) {
+    if (
+      options.coolingRate !== undefined &&
+      (options.coolingRate <= 0 || options.coolingRate >= 1)
+    ) {
       throw new ValidationError('Cooling rate must be between 0 and 1 (exclusive)');
     }
     if (options.initialTemp !== undefined && options.initialTemp <= 0) {
@@ -98,20 +108,20 @@ export class ALNS {
     this.scoreAccepted = options.scoreAccepted ?? 13;  // Paper spec
 
     // 6 destroy operators from paper
-    this.removalOps = Object.keys(RemovalOperators);
+    this.removalOps = [...REMOVAL_OPERATOR_KEYS];
     // 4 repair operators from paper
-    this.insertionOps = Object.keys(InsertionOperators);
+    this.insertionOps = [...INSERTION_OPERATOR_KEYS];
 
-    this.removalWeights = new Array<number>(this.removalOps.length).fill(1);
-    this.insertionWeights = new Array<number>(this.insertionOps.length).fill(1);
+    this.removalWeights = Array.from<number>({ length: this.removalOps.length }).fill(1);
+    this.insertionWeights = Array.from<number>({ length: this.insertionOps.length }).fill(1);
 
     this.scores = {
-      removal: new Array<number>(this.removalOps.length).fill(0),
-      insertion: new Array<number>(this.insertionOps.length).fill(0),
+      removal: Array.from<number>({ length: this.removalOps.length }).fill(0),
+      insertion: Array.from<number>({ length: this.insertionOps.length }).fill(0),
     };
     this.usage = {
-      removal: new Array<number>(this.removalOps.length).fill(0),
-      insertion: new Array<number>(this.insertionOps.length).fill(0),
+      removal: Array.from<number>({ length: this.removalOps.length }).fill(0),
+      insertion: Array.from<number>({ length: this.insertionOps.length }).fill(0),
     };
     this.lambda = 0.1;
     this.logger = options.logger ?? defaultLogger;
@@ -140,8 +150,14 @@ export class ALNS {
     let currentCost = currentSolution.calculateSchedule();
     let bestCost = currentCost;
 
+    const maxStagnation = Math.max(25, Math.floor(this.maxIterations * 0.05));
+    const maxRestarts = 3;
+    let iterationsSinceImprovement = 0;
+    let restartsUsed = 0;
+    let restartCountdown = 0;
+    const baseCooling = this.coolingRate;
+
     for (let i = 0; i < this.maxIterations; i++) {
-      // Timeout check
       if (this.maxTimeMs > 0 && Date.now() - startTime >= this.maxTimeMs) {
         this.logger.log(`ALNS stopped early after ${i} iterations (timeout)`);
         break;
@@ -150,17 +166,21 @@ export class ALNS {
       const rIdx = this.selectOperator(this.removalWeights);
       const iIdx = this.selectOperator(this.insertionWeights);
 
-      const removalOp = RemovalOperators[this.removalOps[rIdx] as keyof typeof RemovalOperators];
-      const insertionOp =
-        InsertionOperators[this.insertionOps[iIdx] as keyof typeof InsertionOperators];
+      const removalOpKey = this.removalOps[rIdx];
+      const insertionOpKey = this.insertionOps[iIdx];
+      if (!removalOpKey || !insertionOpKey) continue;
+      const removalOp = RemovalOperators[removalOpKey];
+      const insertionOp = InsertionOperators[insertionOpKey];
 
       this.usage.removal[rIdx] = (this.usage.removal[rIdx] ?? 0) + 1;
       this.usage.insertion[iIdx] = (this.usage.insertion[iIdx] ?? 0) + 1;
 
-      // Adaptive removal size based on problem scale
+      // Adaptive removal size: grow when stagnant, shrink when improving
+      const stagnationRatio = Math.min(1, iterationsSinceImprovement / maxStagnation);
+      const removalFraction = 0.1 + stagnationRatio * 0.35;
       const k = Math.max(
         1,
-        Math.floor(this.problem.customers.length * (0.1 + Math.random() * 0.3)),
+        Math.floor(this.problem.customers.length * removalFraction),
       );
       const { solution: removedSolution, removed } = removalOp(currentSolution, k);
       const newSolution = insertionOp(removedSolution, removed);
@@ -171,11 +191,17 @@ export class ALNS {
       if (newCost < bestCost) {
         bestSolution = newSolution.clone();
         bestCost = newCost;
-        score = this.scoreNewBest;  // Paper: 33
+        iterationsSinceImprovement = 0;
+        score = this.scoreNewBest;
       } else if (newCost < currentCost) {
-        score = this.scoreBetter;   // Paper: 9
+        iterationsSinceImprovement++;
+        score = this.scoreBetter;
       } else if (this.accept(currentCost, newCost)) {
-        score = this.scoreAccepted; // Paper: 13
+        iterationsSinceImprovement++;
+        score = this.scoreAccepted;
+      } else {
+        iterationsSinceImprovement++;
+        score = 0;
       }
 
       this.scores.removal[rIdx] = (this.scores.removal[rIdx] ?? 0) + score;
@@ -186,15 +212,32 @@ export class ALNS {
         currentCost = newCost;
       }
 
-      // Update weights every segment
-      if (i > 0 && i % this.segmentSize === 0) {
+      if ((i + 1) % this.segmentSize === 0) {
         this.updateWeights();
       }
 
-      // Paper cooling rate: 0.9998 (very slow cooling)
+      // Multi-restart: when deeply stagnant, restart from best with higher temperature
+      if (
+        iterationsSinceImprovement >= maxStagnation &&
+        restartsUsed < maxRestarts &&
+        restartCountdown <= 0
+      ) {
+        this.logger.log(`ALNS restart ${restartsUsed + 1}/${maxRestarts} at iteration ${i}`);
+        currentSolution = bestSolution.clone();
+        currentCost = bestCost;
+        this.temp = this.initialTemp * Math.pow(0.5, restartsUsed);
+        this.coolingRate = baseCooling * (1 + restartsUsed * 0.02);
+        iterationsSinceImprovement = 0;
+        restartsUsed++;
+        restartCountdown = Math.floor(this.segmentSize * 0.5);
+
+        this.removalWeights = Array.from<number>({ length: this.removalOps.length }).fill(1);
+        this.insertionWeights = Array.from<number>({ length: this.insertionOps.length }).fill(1);
+      }
+      if (restartCountdown > 0) restartCountdown--;
+
       this.temp *= this.coolingRate;
 
-      // Progress callback every 10 iterations
       if (this.onProgress && i % 10 === 0) {
         this.onProgress({
           iteration: i,
@@ -218,7 +261,10 @@ export class ALNS {
       const usageVal = usage[i];
       const scoreVal = scores[i];
       const weightVal = weights[i];
-      if (usageVal === undefined || usageVal <= 0 || scoreVal === undefined || weightVal === undefined) {
+      if (
+        usageVal === undefined || usageVal <= 0 ||
+        scoreVal === undefined || weightVal === undefined
+      ) {
         continue;
       }
       const avgScore = scoreVal / usageVal;
@@ -242,7 +288,7 @@ export class ALNS {
     const r = Math.random() * sum;
     let cumulative = 0;
     for (let i = 0; i < weights.length; i++) {
-      cumulative += weights[i]!;
+      cumulative += weights[i] ?? 0;
       if (r <= cumulative) return i;
     }
     return weights.length - 1;

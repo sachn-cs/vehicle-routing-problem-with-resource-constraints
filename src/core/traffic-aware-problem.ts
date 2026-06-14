@@ -1,5 +1,5 @@
-import type { LocationNode, Customer, Vehicle } from './Problem.js';
-import { VrpProblem } from './Problem.js';
+import type { LocationNode, Customer, Vehicle } from './problem.js';
+import { VrpProblem } from './problem.js';
 
 /**
  * Traffic data for a road segment between two nodes.
@@ -26,7 +26,11 @@ export class TrafficModel {
     this.segments.set(key, segment);
   }
 
-  setTimeFactors(fromId: number, toId: number, factors: Array<{ startTime: number; factor: number }>): void {
+  setTimeFactors(
+    fromId: number,
+    toId: number,
+    factors: Array<{ startTime: number; factor: number }>,
+  ): void {
     const key = this.makeKey(fromId, toId);
     this.timeFactors.set(key, factors);
   }
@@ -64,7 +68,10 @@ export class TrafficModel {
     return segment.currentTravelTime;
   }
 
-  getCongestionLevel(fromId: number, toId: number): 'low' | 'medium' | 'high' | 'severe' | undefined {
+  getCongestionLevel(
+    fromId: number,
+    toId: number,
+  ): 'low' | 'medium' | 'high' | 'severe' | undefined {
     const key = this.makeKey(fromId, toId);
     const segment = this.segments.get(key);
     return segment?.congestionLevel;

@@ -1,11 +1,11 @@
 import { workerData, parentPort } from 'worker_threads';
 
-import { ALNS } from './algorithms/alns/ALNS.js';
-import { BRKGA } from './algorithms/brkga/BRKGA.js';
-import type { Chromosome } from './algorithms/brkga/Decoder.js';
-import { VrpProblem, LocationNode, Customer, Vehicle } from './core/Problem.js';
-import type { VrpSolution } from './core/Solution.js';
-import { isWorkerData, validateWorkerData } from './workerValidation.js';
+import { ALNS } from './algorithms/alns/alns.js';
+import { BRKGA } from './algorithms/brkga/brkga.js';
+import type { Chromosome } from './algorithms/brkga/decoder.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from './core/problem.js';
+import type { VrpSolution } from './core/solution.js';
+import { isWorkerData, validateWorkerData } from './worker-validation.js';
 
 interface WorkerResult {
   makespan: number;
@@ -15,7 +15,8 @@ interface WorkerResult {
 
 if (!isWorkerData(workerData)) {
   parentPort?.postMessage({
-    error: 'Invalid workerData: expected { nodes, customers, vehicles, depotNodeId, type, options }',
+    error: 'Invalid workerData: expected ' +
+      '{ nodes, customers, vehicles, depotNodeId, type, options }',
     type: 'unknown',
   });
   process.exit(1);
@@ -51,10 +52,14 @@ void (async () => {
     let solution: VrpSolution;
 
     if (data.type === 'island-brkga') {
-      const { BRKGA } = await import('./algorithms/brkga/BRKGA.js');
+      const { BRKGA } = await import('./algorithms/brkga/brkga.js');
       const brkga = new BRKGA(problem, data.options);
-      const islandMaxGenerations = (data.options['islandMaxGenerations'] as number | undefined) ?? 100;
-      const migrationInterval = (data.options['migrationInterval'] as number | undefined) ?? 50;
+      const islandMaxGenerations = typeof data.options['islandMaxGenerations'] === 'number'
+        ? data.options['islandMaxGenerations']
+        : 100;
+      const migrationInterval = typeof data.options['migrationInterval'] === 'number'
+        ? data.options['migrationInterval']
+        : 50;
 
       let population = brkga.initializePopulation();
       let generation = 0;
@@ -72,10 +77,23 @@ void (async () => {
 
       evaluate();
 
+      function isChromosome(value: unknown): value is Chromosome {
+        if (typeof value !== 'object' || value === null) return false;
+        return 'priorities' in value && Array.isArray(value.priorities) &&
+               'assignments' in value && Array.isArray(value.assignments) &&
+               'dependencies' in value && Array.isArray(value.dependencies) &&
+               'transfers' in value && Array.isArray(value.transfers);
+      }
+
       const messageHandler = (msg: unknown) => {
-        const cmd = msg as { type: string; generations?: number; migrants?: Chromosome[] };
-        if (cmd.type === 'evolve') {
-          const gens = cmd.generations ?? migrationInterval;
+        if (
+          typeof msg !== 'object' || msg === null ||
+          !('type' in msg) || typeof msg.type !== 'string'
+        ) return;
+        if (msg.type === 'evolve') {
+          const gens = 'generations' in msg && typeof msg.generations === 'number'
+            ? msg.generations
+            : migrationInterval;
           for (let g = 0; g < gens && generation < islandMaxGenerations; g++, generation++) {
             population = brkga.evolvePopulation(population);
             evaluate();
@@ -86,19 +104,36 @@ void (async () => {
             generation,
             population,
           });
-        } else if (cmd.type === 'inject') {
-          const migrants = cmd.migrants ?? [];
+        } else if (msg.type === 'inject') {
+          const rawMigrants = 'migrants' in msg ? msg.migrants : undefined;
+          const migrants = Array.isArray(rawMigrants) ? rawMigrants : [];
           const replaceCount = Math.min(migrants.length, population.length);
           for (let i = 0; i < replaceCount; i++) {
             const targetIdx = population.length - 1 - i;
+            if (i >= migrants.length) continue;
+            const migrantRaw: unknown = migrants[i];
+            if (
+              typeof migrantRaw !== 'object' || migrantRaw === null ||
+              !isChromosome(migrantRaw)
+            ) continue;
             population[targetIdx] = {
-              chromosome: migrants[i] as Chromosome,
+              chromosome: {
+                priorities: migrantRaw.priorities,
+                assignments: migrantRaw.assignments,
+                dependencies: migrantRaw.dependencies,
+                transfers: migrantRaw.transfers,
+              },
               fitness: null,
               solution: null,
             };
           }
-          parentPort?.postMessage({ type: 'checkpoint', islandId: data.islandId, generation, population });
-        } else if (cmd.type === 'finish') {
+          parentPort?.postMessage({
+            type: 'checkpoint',
+            islandId: data.islandId,
+            generation,
+            population,
+          });
+        } else if (msg.type === 'finish') {
           evaluate();
           const best = population[0];
           parentPort?.postMessage({
@@ -111,7 +146,12 @@ void (async () => {
       };
 
       parentPort?.on('message', messageHandler);
-      parentPort?.postMessage({ type: 'checkpoint', islandId: data.islandId, generation, population });
+      parentPort?.postMessage({
+        type: 'checkpoint',
+        islandId: data.islandId,
+        generation,
+        population,
+      });
       return;
     }
 

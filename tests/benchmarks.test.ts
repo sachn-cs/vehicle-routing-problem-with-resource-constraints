@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
+import { Decoder, type Chromosome } from '../src/algorithms/brkga/decoder.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
 import { VrpRpdSolver } from '../src/index.js';
 
 describe('Benchmarks', () => {
@@ -104,5 +105,45 @@ describe('Benchmarks', () => {
     // but should be well under the full-run time (~10s)
     expect(elapsed).to.be.lessThan(5000);
     expect(solution.isFeasible()).to.be.true;
+  });
+
+  it('Decoder.decode() should complete 1000 decodes on 100-customer problem under 5s', () => {
+    const problem = generateGridProblem(200); // 200 nodes = 100 customers
+    const decoder = new Decoder(problem);
+
+    const chromosome: Chromosome = {
+      priorities: problem.customers.map(() => Math.random()),
+      assignments: problem.customers.map(() => Math.random()),
+      dependencies: problem.customers.map(() => Math.random()),
+      transfers: problem.customers.map(() => Math.random()),
+    };
+
+    const start = Date.now();
+    for (let i = 0; i < 1000; i++) {
+      const solution = decoder.decode(chromosome);
+      expect(solution.isFeasible()).to.be.true;
+    }
+    const elapsed = Date.now() - start;
+    expect(elapsed).to.be.lessThan(5000);
+  });
+
+  it('Decoder.decode() should produce consistent results across calls', () => {
+    const problem = generateGridProblem(40); // 40 nodes = 20 customers
+    const decoder = new Decoder(problem);
+
+    const chromosome: Chromosome = {
+      priorities: problem.customers.map(() => Math.random()),
+      assignments: problem.customers.map(() => Math.random()),
+      dependencies: problem.customers.map(() => Math.random()),
+      transfers: problem.customers.map(() => Math.random()),
+    };
+
+    const first = decoder.decode(chromosome);
+    for (let i = 0; i < 10; i++) {
+      const next = decoder.decode(chromosome);
+      expect(next.makespan).to.equal(first.makespan);
+      expect(next.isFeasible()).to.equal(first.isFeasible());
+      expect(next.isComplete()).to.equal(first.isComplete());
+    }
   });
 });

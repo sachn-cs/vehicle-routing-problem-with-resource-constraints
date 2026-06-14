@@ -1,7 +1,7 @@
 {
   "name": "vehicle-routing",
   "version": "1.0.0",
-  "description": "VRP-RPD Solver with multi-objective optimization",
+  "description": "VRP-RPD solver for Indian logistics: route optimization with ALNS + BRKGA metaheuristics, time windows, multi-depot, and traffic-aware routing",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -17,7 +17,10 @@
     "vrp-solver": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md",
+    "samples/"
   ],
   "engines": {
     "node": ">=18"
@@ -33,7 +36,8 @@
     "test:coverage": "c8 mocha",
     "docs": "typedoc",
     "docs:md": "typedoc --plugin typedoc-plugin-markdown --out docs/md",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test"
   },
   "c8": {
     "reporter": [
@@ -59,11 +63,17 @@
   },
   "keywords": [
     "vrp",
-    "routing",
-    "optimization",
-    "logistics"
+    "vehicle-routing",
+    "route-optimization",
+    "logistics",
+    "last-mile",
+    "delivery",
+    "alns",
+    "brkga",
+    "metaheuristic",
+    "optimization"
   ],
-  "author": "",
+  "author": "Sachin",
   "license": "ISC",
   "repository": {
     "type": "git",

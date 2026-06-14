@@ -26,7 +26,7 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/restrict-plus-operands': 'error',
-      '@typescript-eslint/no-deprecated': 'warn',
+
       'import/order': [
         'error',
         {
@@ -36,6 +36,12 @@ export default tseslint.config(
         },
       ],
       'no-console': ['warn', { allow: ['error'] }],
+    },
+  },
+  {
+    files: ['src/cli.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
   {

@@ -1,7 +1,7 @@
-import type { VrpProblem } from '../core/Problem.js';
-import type { VrpSolution } from '../core/Solution.js';
+import type { VrpProblem } from '../core/problem.js';
+import type { VrpSolution } from '../core/solution.js';
 
-import { RouteAnalytics } from './RouteAnalytics.js';
+import { RouteAnalytics } from './route-analytics.js';
 
 export interface SolutionMetrics {
   makespan: number;
@@ -82,7 +82,8 @@ export class SolutionComparator {
     // Sort and assign ranks (lower is better for all metrics)
     const sorted = [...values].sort((a, b) => a.value - b.value);
     for (let i = 0; i < sorted.length; i++) {
-      sorted[i]!.rank = i + 1;
+      const entry = sorted[i];
+      if (entry) entry.rank = i + 1;
     }
 
     // Map ranks back to original order
@@ -140,12 +141,14 @@ export class SolutionComparator {
     const paretoObjectives: ParetoFront['objectives'] = [];
 
     for (let i = 0; i < metrics.length; i++) {
-      const current = metrics[i]!;
+      const current = metrics[i];
+      if (!current) continue;
       let dominated = false;
 
       for (let j = 0; j < metrics.length; j++) {
         if (i === j) continue;
-        const other = metrics[j]!;
+        const other = metrics[j];
+        if (!other) continue;
 
         // Check if other dominates current
         const dominates =
@@ -196,7 +199,8 @@ export class SolutionComparator {
 
     for (const [metric, result] of Object.entries(comparisons)) {
       report += `${metric}:\n`;
-      report += `  Best: ${result.best.toFixed(2)} (Solution ${result.values.find(v => v.value === result.best)?.solutionIndex})\n`;
+      const bestIdx = result.values.find(v => v.value === result.best)?.solutionIndex;
+      report += `  Best: ${result.best.toFixed(2)} (Solution ${bestIdx})\n`;
       report += `  Worst: ${result.worst.toFixed(2)}\n`;
       report += `  Improvement: ${result.improvement.toFixed(1)}%\n\n`;
     }
@@ -205,8 +209,13 @@ export class SolutionComparator {
     if (pareto.solutions.length > 0) {
       report += 'Pareto-optimal solution indices: ' + pareto.solutions.join(', ') + '\n';
       for (let i = 0; i < pareto.objectives.length; i++) {
-        const obj = pareto.objectives[i]!;
-        report += `  Solution ${pareto.solutions[i]}: makespan=${obj.makespan.toFixed(2)}, distance=${obj.distance.toFixed(2)}, cost=${obj.cost.toFixed(2)}, co2=${obj.co2.toFixed(2)}\n`;
+        const obj = pareto.objectives[i];
+        const solIdx = pareto.solutions[i];
+        if (!obj || solIdx === undefined) continue;
+        report += `  Solution ${solIdx}: ` +
+          `makespan=${obj.makespan.toFixed(2)}, ` +
+          `distance=${obj.distance.toFixed(2)}, ` +
+          `cost=${obj.cost.toFixed(2)}, co2=${obj.co2.toFixed(2)}\n`;
       }
     } else {
       report += 'No Pareto-optimal solutions found (one solution dominates all others)\n';

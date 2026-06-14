@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
-import { VrpSolution, Route } from '../src/core/Solution.js';
-import { GISExporter } from '../src/export/GISExporter.js';
-import { isWorkerData, validateWorkerData } from '../src/workerValidation.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
+import { VrpSolution, Route } from '../src/core/solution.js';
+import { GISExporter } from '../src/export/gis-exporter.js';
+import { isWorkerData, validateWorkerData } from '../src/worker-validation.js';
 
 describe('Security S1 - KML XML escaping', () => {
   it('escapeXml helper escapes all XML entities', () => {
@@ -48,18 +48,22 @@ describe('Security S1 - KML XML escaping', () => {
     // The content between <name> and </name> should not contain unescaped < or >
     const nameMatches = kml.match(/<name>(.*?)<\/name>/g);
     expect(nameMatches).to.exist;
-    for (const match of nameMatches!) {
-      const inner = match.replace(/<name>/, '').replace(/<\/name>/, '');
-      expect(inner).to.not.include('<');
-      expect(inner).to.not.include('>');
+    if (nameMatches) {
+      for (const match of nameMatches) {
+        const inner = match.replace(/<name>/, '').replace(/<\/name>/, '');
+        expect(inner).to.not.include('<');
+        expect(inner).to.not.include('>');
+      }
     }
 
     const descMatches = kml.match(/<description>(.*?)<\/description>/g);
     expect(descMatches).to.exist;
-    for (const match of descMatches!) {
-      const inner = match.replace(/<description>/, '').replace(/<\/description>/, '');
-      expect(inner).to.not.include('<');
-      expect(inner).to.not.include('>');
+    if (descMatches) {
+      for (const match of descMatches) {
+        const inner = match.replace(/<description>/, '').replace(/<\/description>/, '');
+        expect(inner).to.not.include('<');
+        expect(inner).to.not.include('>');
+      }
     }
   });
 });

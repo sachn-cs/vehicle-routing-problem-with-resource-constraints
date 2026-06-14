@@ -1,5 +1,6 @@
-import type { Customer, CustomerWithTimeWindows, LocationNode } from '../../core/Problem.js';
-import type { VrpSolution } from '../../core/Solution.js';
+import type { Customer, LocationNode } from '../../core/problem.js';
+import type { VrpSolution } from '../../core/solution.js';
+import { isCustomerWithTimeWindows } from '../../core/solution.js';
 
 function removeCustomerFromRoutes(solution: VrpSolution, customer: Customer): boolean {
   let removedAny = false;
@@ -22,6 +23,7 @@ function removeCustomerFromRoutes(solution: VrpSolution, customer: Customer): bo
       removedAny = true;
     } else if (pIndex !== -1) {
       route.nodes.splice(pIndex, 1);
+      removedAny = true;
     }
   }
   return removedAny;
@@ -94,7 +96,7 @@ export const RemovalOperators = {
     const newVrpSolution = solution.clone();
     const removed: Customer[] = [];
 
-    if (solution.problem.customers.length === 0) {
+    if (k <= 0 || solution.problem.customers.length === 0) {
       return { solution: newVrpSolution, removed };
     }
 
@@ -244,10 +246,9 @@ export const RemovalOperators = {
       let score = 0;
 
       // Check if time window constrained
-      if ('earliestDeliveryTime' in customer) {
-        const twCustomer = customer as CustomerWithTimeWindows;
-        const deliverySlack = Math.max(0, twCustomer.earliestDeliveryTime - deliveryTime);
-        const pickupSlack = Math.max(0, twCustomer.earliestPickupTime - pickupTime);
+      if (isCustomerWithTimeWindows(customer)) {
+        const deliverySlack = Math.max(0, customer.earliestDeliveryTime - deliveryTime);
+        const pickupSlack = Math.max(0, customer.earliestPickupTime - pickupTime);
         score = deliverySlack + pickupSlack;
       }
 
@@ -488,3 +489,13 @@ function regretInsertion(
   newVrpSolution.calculateSchedule();
   return newVrpSolution;
 }
+
+export type RemovalOperatorKey = keyof typeof RemovalOperators;
+export type InsertionOperatorKey = keyof typeof InsertionOperators;
+
+export const REMOVAL_OPERATOR_KEYS: RemovalOperatorKey[] = [
+  'random', 'worst', 'shaw', 'cluster', 'proximity', 'temporal',
+];
+export const INSERTION_OPERATOR_KEYS: InsertionOperatorKey[] = [
+  'greedyInsertion', 'regret2Insertion', 'regret3Insertion', 'regret4Insertion',
+];

@@ -1,0 +1,21 @@
+{
+  "depotNodeId": 0,
+  "nodes": [
+    { "id": 0, "x": 0, "y": 0, "name": "Depot" },
+    { "id": 1, "x": 10, "y": 5, "name": "Customer 1 - Drop" },
+    { "id": 2, "x": 12, "y": 8, "name": "Customer 1 - Pick" },
+    { "id": 3, "x": 30, "y": 2, "name": "Customer 2 - Drop" },
+    { "id": 4, "x": 32, "y": 5, "name": "Customer 2 - Pick" }
+  ],
+  "customers": [
+    { "id": 1, "deliveryNodeId": 1, "pickupNodeId": 2, "processingTime": 15,
+      "earliestDeliveryTime": 60, "latestDeliveryTime": 120,
+      "earliestPickupTime": 90, "latestPickupTime": 180 },
+    { "id": 2, "deliveryNodeId": 3, "pickupNodeId": 4, "processingTime": 20,
+      "earliestDeliveryTime": 180, "latestDeliveryTime": 300,
+      "earliestPickupTime": 240, "latestPickupTime": 360 }
+  ],
+  "vehicles": [
+    { "id": 1, "capacity": 30, "costPerKm": 10, "co2PerKm": 0.12 }
+  ]
+}

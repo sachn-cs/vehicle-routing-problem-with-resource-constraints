@@ -1,15 +1,15 @@
 import { expect } from 'chai';
 
-import { ALNS } from '../src/algorithms/alns/ALNS.js';
+import { ALNS } from '../src/algorithms/alns/alns.js';
 import { InsertionOperators } from '../src/algorithms/alns/operators.js';
-import { BRKGA } from '../src/algorithms/brkga/BRKGA.js';
-import { RouteAnalytics } from '../src/analytics/RouteAnalytics.js';
-import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/Problem.js';
-import { TransferHub } from '../src/core/ResourceTransfer.js';
-import { VrpSolution, Route } from '../src/core/Solution.js';
-import { ProblemWithTransfers } from '../src/core/SolutionWithTransfers.js';
-import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/VehicleWithCapabilities.js';
-import { GISExporter } from '../src/export/GISExporter.js';
+import { BRKGA } from '../src/algorithms/brkga/brkga.js';
+import { RouteAnalytics } from '../src/analytics/route-analytics.js';
+import { VrpProblem, LocationNode, Customer, Vehicle } from '../src/core/problem.js';
+import { TransferHub } from '../src/core/resource-transfer.js';
+import { ProblemWithTransfers } from '../src/core/solution-with-transfers.js';
+import { VrpSolution, Route } from '../src/core/solution.js';
+import { VehicleWithCapabilities, VehicleFleetManager } from '../src/core/vehicle-with-capabilities.js';
+import { GISExporter } from '../src/export/gis-exporter.js';
 
 // ============================================================
 // T1: ResourceType is a closed union
@@ -160,8 +160,9 @@ describe('T5 - Safe indexed access in algorithms', () => {
     const problem = new VrpProblem(nodes, [new Customer(1, 1, 2, 50)], [new Vehicle(1, 10)], 0);
     const solver = new ALNS(problem, { maxIterations: 2 });
 
-    // Access protected method via type assertion for testing
-    const idx = (solver as unknown as { selectOperator: (weights: number[]) => number }).selectOperator([0, 0, 0]);
+    // Access protected method for testing
+    // @ts-expect-error - accessing protected method for test
+    const idx = solver.selectOperator([0, 0, 0]);
     expect(idx).to.be.at.least(0);
     expect(idx).to.be.at.most(2);
   });
