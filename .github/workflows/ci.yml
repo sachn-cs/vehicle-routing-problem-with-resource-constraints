@@ -14,18 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint -- --max-warnings 0
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
@@ -36,10 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [20.x, 22.x]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -51,7 +54,8 @@ jobs:
     needs: [lint, typecheck, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
